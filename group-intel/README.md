@@ -43,6 +43,20 @@ python scripts/log_and_push.py --action 部署 --note "ECS 中转站首次上线
 # 脚本只暂存 group-intel/ 目录内的变更，不会动组员在仓库其它目录的文件
 ```
 
+### 只有密码、没有 .pem 的话
+
+`deploy.sh` 走的是密钥认证。你们全员用 root + 密码登录，那就别用它，直接在 FinalShell 里做同样的事：左侧文件面板把 `server/`、`web/`、`.env.example` 拖到服务器 `/opt/groupintel/`（**不要传 `.env`**，百炼 Key 只在服务器上填），再在内置终端执行：
+
+```bash
+mkdir -p /opt/groupintel && cd /opt/groupintel
+pip3 install -r server/requirements.txt --break-system-packages || pip3 install -r server/requirements.txt
+[ -f .env ] || cp .env.example .env
+chmod 600 .env
+cp server/groupintel.service /etc/systemd/system/groupintel.service
+systemctl daemon-reload && systemctl enable --now groupintel
+systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
+```
+
 ## 二、其他人怎么用
 
 - **电脑**：`python local/launcher.py --server 47.xx.xx.xx` → 独立应用窗口；或直接双击 `local/GroupIntel.bat 47.xx.xx.xx 8000`
@@ -66,35 +80,30 @@ python scripts/log_and_push.py --action 部署 --note "ECS 中转站首次上线
 
 ## 五、组员怎么连上服务器改文件
 
-全员共用一把 `.pem` 登 root，所以**不需要任何权限配置**——root 天然能改服务器上所有文件。只剩三件事。
+全员（包括你自己）都是 **root + 密码** 登录，FinalShell 里不选公钥、不需要任何 `.pem` / `.pub` 文件。所以没有"分发钥匙"这件事，只剩两件事：安全组放行、协作约定。
 
 ### 1. 安全组放行（阿里云控制台 → ECS → 安全组 → 入方向规则）
 
-| 端口 | 用途 |
-|---|---|
-| `22/TCP` | 组员从自己电脑 SSH/FinalShell 连进来 |
-| `8000/TCP` | 组员和评委用浏览器打开你们的软件（`deploy.sh` 里 uvicorn 已监听 `0.0.0.0`） |
+| 端口 | 用途 | 来源 |
+|---|---|---|
+| `22/TCP` | 组员从自己电脑 SSH/FinalShell 连进来 | 尽量填组员的出口 IP（`1.2.3.4/32`，一人一条），别偷懒填 `0.0.0.0/0` |
+| `8000/TCP` | 组员和评委用浏览器打开你们的软件（`deploy.sh` 里 uvicorn 已监听 `0.0.0.0`） | `0.0.0.0/0`（要给外面演示，必须全开） |
 
-ECS 有公网 IP 就天生对外可达，卡点只在安全组，来源填 `0.0.0.0/0` 图省事可以，但必须配合第 3 条把密码登录关掉。
+原因：**22 端口对全网开放 + 允许密码登录 = 扫描器几小时内就会来爆破**，这是这套连接方式唯一真正的风险。限来源 IP 是最省事的缓解，比装任何工具都有效；组员 IP 变了就改那一条规则。查询自己的出口 IP：浏览器搜 "ip" 或 `curl ip.sb`。
 
-### 2. 分发私钥 + 组员侧连接
+### 2. 组员侧连接（FinalShell）
 
-- 把 `.pem` 给每人一份（是 `.pem`，**不是 `.pub`**）。别丢进微信/QQ 群——那等于把服务器钥匙放进公网聊天记录；用当面拷贝、U 盘，或加密压缩包 + 口头给解压密码。
-- 组员 FinalShell 新建连接：主机=公网IP、端口 `22`、用户名 `root`、认证方式选「公钥」→ 导入他拿到的 `.pem` → 连接。命令行等价：`ssh -i xxx.pem root@你的IP`。
-- 谁手里是 PuTTY 的 `.ppk`，FinalShell 不认，先用 PuTTYgen 转成 OpenSSH 格式。
-- 核对大家拿到的是不是同一把：本地 `ssh-keygen -lf xxx.pem` 打印指纹比对；或在服务器上 `cat /root/.ssh/authorized_keys` 看有几把钥匙。
+新建连接 → 主机=公网IP、端口 `22`、用户名 `root`、认证方式选 **「密码」** → 输入密码 → 连接。命令行等价：`ssh root@你的IP`。
 
-### 3. 协作约定（共用 root 真正的风险是互相覆盖，不是权限）
+- 界面里那个「公钥」选项**不要选**（它要的是私钥文件，你们手上没有，也不需要）。首次连接如果弹窗问要不要生成/上传密钥，跳过即可，不影响使用。
+- 密码怎么传：别在群里明文发。口头/电话说，或加密压缩包 + 另开渠道给解压密码。密码本身要够长（16 位以上混合），弱密码配上开放的 22 端口基本等于没锁门。
+- 记住 root 能改服务器上任何文件、也能删掉任何东西——这是"人人平等"的代价，所以有第 3 条。
 
-- **动手前先 `git pull`，改完当天跑一次** `python scripts/log_and_push.py --action 修改 --note "谁 + 改了什么"`。note 里写名字，这是共享一把钥匙下唯一的追责与恢复手段——`/opt/groupintel` 被谁误删也能 clone 回来。
+### 3. 协作约定（真正的风险是互相覆盖和查不到人，不是权限）
+
+- **动手前先 `git pull`，改完当天跑一次** `python scripts/log_and_push.py --action 修改 --note "谁 + 改了什么"`。note 里写名字，这是共用密码下唯一的追责与恢复手段——`/opt/groupintel` 被谁误删也能 clone 回来。
 - 改完代码重启服务：`systemctl restart groupintel`（你就是 root，不用 sudo）。
-- 钥匙都试通之后关掉密码登录：
-  ```bash
-  sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
-  systemctl reload sshd
-  ```
-  **改之前另开一个终端用钥匙再登一次**，确认能进再改，否则会把自己也锁在外面。
-- 想撤销某个人：共用一把做不到单独撤销，只能换钥匙全员重发（控制台新建密钥对 → 绑定实例 → 重新分发）。以后要能单独撤销，就得回到"每人一把公钥"的路子。
+- 想撤销某个人的访问：共用密码做不到单独撤销，只能改密码然后重新通知全员。以后要能单独踢人、或者把密码登录关掉，就得换成"每人一把自己的公钥登记到 `/root/.ssh/authorized_keys`"的路子，那时再来找我。
 
 ## 六、下一步
 

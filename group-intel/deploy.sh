@@ -28,7 +28,7 @@ export DEBIAN_FRONTEND=noninteractive
 command -v pip3 >/dev/null || { apt-get update -qq && apt-get install -y -qq python3-pip > /dev/null; }
 pip3 install -q --break-system-packages -r $REMOTE_DIR/server/requirements.txt 2>/dev/null \
   || pip3 install -q -r $REMOTE_DIR/server/requirements.txt
-cp -f $REMOTE_DIR/.env.example $REMOTE_DIR/.env 2>/dev/null || true
+[ -f $REMOTE_DIR/.env ] || cp -f $REMOTE_DIR/.env.example $REMOTE_DIR/.env 2>/dev/null || true
 [ -f $REMOTE_DIR/.env ] || echo 'DASHSCOPE_API_KEY=' > $REMOTE_DIR/.env
 chmod 600 $REMOTE_DIR/.env
 cp -f $REMOTE_DIR/server/groupintel.service /etc/systemd/system/groupintel.service
