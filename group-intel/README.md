@@ -64,36 +64,37 @@ python scripts/log_and_push.py --action 部署 --note "ECS 中转站首次上线
 - 用 IP + 8000 端口直连是 HTTP，浏览器不会弹出「安装应用」按钮。要真正的安装包（apk / exe）见下一步计划。
 - 大陆 ECS 的 80/443 端口对外提供网页需要 ICP 备案，所以这里用非标端口，别纠结。
 
-## 五、给组员开服务器开发权限
+## 五、组员怎么连上服务器改文件
 
-**不要把你手里那把 `.pem` 发给任何人**——它是 root 私钥，发出去等于人人都是最高权限，而且想收回只能换钥匙、全员重发。正确做法是各人一把公钥，你只登记公钥，撤销时删他一个人。
+全员共用一把 `.pem` 登 root，所以**不需要任何权限配置**——root 天然能改服务器上所有文件。只剩三件事。
 
-### 模式一：各自公钥登 root（推荐给你们现状，FinalShell 习惯不变）
+### 1. 安全组放行（阿里云控制台 → ECS → 安全组 → 入方向规则）
 
-1. 组员在自己电脑上生成密钥对，把**公钥那一行**发给你（公钥可以随便发，私钥不出他电脑）：
-   ```bash
-   ssh-keygen -t ed25519 -C "liming"    # Windows 打开 Git Bash，一路回车
-   cat ~/.ssh/id_ed25519.pub            # 整行复制发给你
-   ```
-2. 你在本机一条命令登记（公钥走临时文件传输，不拼进远程命令；账号名和公钥格式都做白名单校验）：
-   ```bash
-   ECS_IP=47.xx.xx.xx ECS_KEY=/c/Users/潘辰嘉/keys/xxx.pem \
-     ./scripts/grant_dev.sh addroot liming "ssh-ed25519 AAAA... liming"
-   ./scripts/grant_dev.sh listroot          # 看登记了谁（只显示指纹，不打印完整公钥）
-   ./scripts/grant_dev.sh delroot liming    # 撤销：只删他那一行，其他人不受影响
-   ```
-   重复执行同一个人会自动换新钥匙，不会堆出多行。
-3. 组员在 FinalShell 里：编辑该主机 → 认证方式选「公钥」→ 选择/导入**他自己的私钥**（`~/.ssh/id_ed25519`，没有 `.pub` 那个文件），用户名仍填 `root`。不同版本入口名称略有差异，找不到就用命令行 `ssh -i ~/.ssh/id_ed25519 root@你的IP`，效果一样。
+| 端口 | 用途 |
+|---|---|
+| `22/TCP` | 组员从自己电脑 SSH/FinalShell 连进来 |
+| `8000/TCP` | 组员和评委用浏览器打开你们的软件（`deploy.sh` 里 uvicorn 已监听 `0.0.0.0`） |
 
-钥匙都登记完了，就把 `/etc/ssh/sshd_config` 里的 `PasswordAuthentication` 改成 `no` 再 `systemctl reload sshd`——22 端口对全网开放还留着密码登录，等于给人留后门。**改之前务必确认至少有一把公钥能用**，否则会把自己也锁在外面。
+ECS 有公网 IP 就天生对外可达，卡点只在安全组，来源填 `0.0.0.0/0` 图省事可以，但必须配合第 3 条把密码登录关掉。
 
-### 模式二：独立账号 + sudo（想审计谁做了什么时用）
+### 2. 分发私钥 + 组员侧连接
 
-```bash
-./scripts/grant_dev.sh add liming "ssh-ed25519 AAAA... liming"   # 建账号+dev组可写项目目录+sudo
-./scripts/grant_dev.sh list / del liming
-```
-组员登录 `ssh liming@IP`，改完 `sudo systemctl restart groupintel`。好处是出事故能查到具体账号、能单独禁用，`/opt/groupintel` 靠 dev 组共享可写而不必人人 root。
+- 把 `.pem` 给每人一份（是 `.pem`，**不是 `.pub`**）。别丢进微信/QQ 群——那等于把服务器钥匙放进公网聊天记录；用当面拷贝、U 盘，或加密压缩包 + 口头给解压密码。
+- 组员 FinalShell 新建连接：主机=公网IP、端口 `22`、用户名 `root`、认证方式选「公钥」→ 导入他拿到的 `.pem` → 连接。命令行等价：`ssh -i xxx.pem root@你的IP`。
+- 谁手里是 PuTTY 的 `.ppk`，FinalShell 不认，先用 PuTTYgen 转成 OpenSSH 格式。
+- 核对大家拿到的是不是同一把：本地 `ssh-keygen -lf xxx.pem` 打印指纹比对；或在服务器上 `cat /root/.ssh/authorized_keys` 看有几把钥匙。
+
+### 3. 协作约定（共用 root 真正的风险是互相覆盖，不是权限）
+
+- **动手前先 `git pull`，改完当天跑一次** `python scripts/log_and_push.py --action 修改 --note "谁 + 改了什么"`。note 里写名字，这是共享一把钥匙下唯一的追责与恢复手段——`/opt/groupintel` 被谁误删也能 clone 回来。
+- 改完代码重启服务：`systemctl restart groupintel`（你就是 root，不用 sudo）。
+- 钥匙都试通之后关掉密码登录：
+  ```bash
+  sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication no/' /etc/ssh/sshd_config
+  systemctl reload sshd
+  ```
+  **改之前另开一个终端用钥匙再登一次**，确认能进再改，否则会把自己也锁在外面。
+- 想撤销某个人：共用一把做不到单独撤销，只能换钥匙全员重发（控制台新建密钥对 → 绑定实例 → 重新分发）。以后要能单独撤销，就得回到"每人一把公钥"的路子。
 
 ## 六、下一步
 
