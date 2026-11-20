@@ -64,8 +64,8 @@ def main():
         git("remote", "remove", "origin", check=False)
         git("remote", "add", "origin", args.remote)
 
-    status = git("status", "--porcelain", "--", ".").stdout.strip()
-    changed = [line[3:] for line in status.splitlines() if line] if status else ["（无文件变更）"]
+    status = git("status", "--porcelain", "--", ".").stdout
+    changed = [line[3:] for line in status.splitlines() if line.strip()] or ["（无文件变更）"]
 
     for f in args.files:
         p = pathlib.Path(f)
