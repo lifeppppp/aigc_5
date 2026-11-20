@@ -38,9 +38,9 @@ curl http://127.0.0.1:8000/api/health
 
 # 3. 阿里云控制台 → ECS → 安全组 → 入方向放行 8000/TCP（0.0.0.0/0 便于演示，赛后可收紧）
 
-# 4. 绑定 GitHub 仓库并推第一篇日志
-python scripts/log_and_push.py --remote git@github.com:lifeppppp/group-intel.git \
-  --action 部署 --note "ECS 中转站首次上线"
+# 4. 每次改动/下载后记一笔（仓库是组内共享的 lifeppppp/aigc_5，本项目在 group-intel/ 子目录）
+python scripts/log_and_push.py --action 部署 --note "ECS 中转站首次上线"
+# 脚本只暂存 group-intel/ 目录内的变更，不会动组员在仓库其它目录的文件
 ```
 
 ## 二、其他人怎么用
