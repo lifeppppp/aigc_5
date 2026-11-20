@@ -64,7 +64,27 @@ python scripts/log_and_push.py --action 部署 --note "ECS 中转站首次上线
 - 用 IP + 8000 端口直连是 HTTP，浏览器不会弹出「安装应用」按钮。要真正的安装包（apk / exe）见下一步计划。
 - 大陆 ECS 的 80/443 端口对外提供网页需要 ICP 备案，所以这里用非标端口，别纠结。
 
-## 五、下一步
+## 五、给组员开服务器开发权限
+
+**不要把你手里那把 `.pem` 发给任何人**——它是 root 私钥，发出去等于人人都是最高权限，而且想收回只能换钥匙、全员重发。正确做法是各人一把公钥，你只登记公钥，撤销时删他一个人。
+
+1. 组员在自己电脑上生成密钥对，把**公钥那一行**发给你（公钥可以随便发，私钥不出他电脑）：
+   ```bash
+   ssh-keygen -t ed25519 -C "liming"    # Windows 用 Git Bash，一路回车
+   cat ~/.ssh/id_ed25519.pub            # 输出整行复制给你
+   ```
+2. 你在本机一条命令开权限（建独立账号 + 装公钥 + 加入 dev 组可编辑项目目录 + 给 sudo，开发权限与你平行）：
+   ```bash
+   ECS_IP=47.xx.xx.xx ECS_KEY=/c/Users/潘辰嘉/keys/xxx.pem \
+     ./scripts/grant_dev.sh add liming "ssh-ed25519 AAAA... liming"
+   ./scripts/grant_dev.sh list          # 看现在有哪些账号、谁有公钥
+   ./scripts/grant_dev.sh del liming    # 撤销：只禁用他一个人，其他人不受影响
+   ```
+3. 组员直接 `ssh liming@47.xx.xx.xx` 登录，改完代码 `sudo systemctl restart groupintel` 生效。
+
+用独立账号而不是人人 root，是为了：出事故能查是谁的哪次操作、能单独掉权限、`/opt/groupintel` 靠 dev 组共享可写而不必都拿 root。
+
+## 六、下一步
 
 - 打真安装包：`pyinstaller` 出 Windows exe；手机端用 PWABuilder 把站点封成 apk（需要 https）
 - 整理结果落库（sqlite）+ 按周聚合，给最后总结用
