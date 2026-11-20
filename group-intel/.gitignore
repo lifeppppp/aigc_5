@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+logs/*.log
+local/build/
+.DS_Store
+nohup.out
