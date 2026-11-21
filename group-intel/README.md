@@ -57,6 +57,12 @@ systemctl daemon-reload && systemctl enable --now groupintel
 systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
 ```
 
+### 环境要求（为什么这套代码能在老镜像上跑）
+
+- 代码刻意保持在 **Python 3.8 可运行**：`server/app.py` 的请求模型用 `Optional[str]` / `List[dict]`，不用 `str | None`（3.10+）和 `list[dict]`（3.9+）。所以 **Ubuntu 20.04（自带 3.8）不用换镜像**也能部署。
+- 3.8 上 pip 会自动解析到最后支持它的这套依赖：`fastapi 0.124.4` / `pydantic 2.10.6` / `uvicorn 0.33.0`，接口行为与新版一致，不需要手工钉版本。
+- **2 GiB 内存的机器**上 `pip3 install` 如果直接打印 `Killed`，那是 OOM 被内核杀掉，不是包装错了。先试 `pip3 install --no-cache-dir -r server/requirements.txt`；反复被杀再考虑加一个 swap 文件（属于额外优化，不影响功能）。
+
 ## 二、接入百炼：组长四步（Key 只在这一步出现）
 
 代码不用重写，`server/llm.py` 已经封装好百炼的 OpenAI 兼容接口。组员要"接入大模型"，其实是在调下面这几个接口，不需要任何人拿到 Key。

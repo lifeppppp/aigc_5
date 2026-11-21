@@ -2,6 +2,7 @@
 
 import os
 import time
+from typing import List, Optional
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -27,12 +28,12 @@ def verify_token(x_client_token: str = Header(default="")):
 class SummarizeIn(BaseModel):
     text: str
     focus: str = ""
-    model: str | None = None
+    model: Optional[str] = None
 
 
 class ChatIn(BaseModel):
-    messages: list[dict]
-    model: str | None = None
+    messages: List[dict]
+    model: Optional[str] = None
 
 
 class PushIn(BaseModel):
