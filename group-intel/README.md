@@ -1,28 +1,38 @@
-# 群情报助手（钉钉工作群 → ECS 中转 → 阿里百炼 → 电脑/手机客户端）
+# 群情报助手（本地软件 ⇄ ECS 中转 ⇄ 阿里百炼智能体）
 
 5 人小组的三段式链路，本仓库是可运行的完整骨架。
 
+**架构口径（组长 2026-11-21 重申，以此为准）**：数据处理和数据存放全部在阿里百炼的智能体那一侧；我们的 ECS **只做 API 接口的调转**，作用是保证本地软件实时可用，不承担业务处理、不建数据库；用户从**本地软件**与大模型对话；**GitHub 只作文档与日志，不储存数据**。
+
 ```
-钉钉工作群
-   │  ① Stream 模式收消息（@机器人）／或客户端粘贴聊天记录
-   ▼
-本地客户端  launcher.py / 浏览器  ──►  ② 阿里云 ECS:8000 中转站 (FastAPI)
-   ▲                                        │ ③ API Key 只留在服务器
-   │                                        ▼
-   └──── 整理结果（摘要/待办/决策/风险） ◄── 阿里百炼 qwen3.7-plus
-                     │
-                     └── 每次改动 → logs/ + copies/ → 推 GitHub（组员可回溯）
+① 用户在本地软件提问
+   local/launcher.py 独立窗口  /  web/（服务器托管，电脑手机共用）
+        │ ② HTTP + X-Client-Token
+        ▼
+   阿里云 ECS:8000 中转站 (FastAPI)      ← 提示词在这里拼，API Key 只在这台机器的 .env 里
+        │ ③ HTTPS 调用百炼接口
+        ▼
+   阿里百炼智能体（qwen3.7-plus）
+        │ ④ 思考、生成响应；信息整理等处理与数据存放都在这一侧
+        ▼
+   回到中转站 ⑤（只解析返回格式，不改内容）
+        │ ⑥ HTTP 原路返回
+        ▼
+   本地软件渲染：主题 / 摘要 / 待办 / 决策 / 风险 / 关键词
+
+钉钉群 ── 只是素材来源（@机器人 收消息，或成员粘贴记录），不是处理环节
+每次改动 ──► logs/ 日志 + 代码副本 ──► 推 GitHub（只放文档、日志、代码，不放业务数据）
 ```
 
 ## 目录
 
 | 目录 | 作用 |
 |---|---|
-| `server/` | 部署在 ECS 上的中转站：`app.py`（HTTP 接口）、`llm.py`（百炼调用）、`summarize.py`（整理提示词与结构化解析）、`dingtalk_push.py`（回写群机器人）、`dingtalk_bot.py`（Stream 收群消息）、`groupintel.service` |
+| `server/` | 部署在 ECS 上的**中转站**：`app.py`（HTTP 接口，校验令牌后转发）、`llm.py`（百炼调用，唯一持 Key 处）、`summarize.py`（提示词模板 + 返回结果解析，内容整理本身由百炼完成）、`dingtalk_push.py`（回写群机器人）、`dingtalk_bot.py`（Stream 收 @机器人 消息）、`groupintel.service`。**这里没有数据库，也不落盘业务数据** |
 | `web/` | 电脑和手机共用的界面，由服务器直接托管，打开即用；带 manifest 可安装成应用 |
 | `local/` | 本地客户端启动器 `launcher.py` + 双击入口 `GroupIntel.bat`，独立窗口打开软件 |
-| `scripts/log_and_push.py` | 每次服务器改动/下载后：写日志 + 存全量代码副本 + 推 GitHub |
-| `logs/` `copies/` | 日志与副本的历史归档，最后总结的素材 |
+| `scripts/log_and_push.py` | 每次服务器改动/下载后：写日志 + 存代码副本 + 推 GitHub |
+| `logs/` `copies/` | 日志与代码副本归档，最后总结的素材。**GitHub 只作文档与日志用：群聊原文、整理结果、密钥一律不进仓库** |
 | `架构问题与解决方法.md` | 汇报素材：每个架构问题的原因、解决方式和对应代码位置，末尾单列「还没验证的」 |
 
 ## 一、上手（服务器拥有者）
@@ -37,7 +47,8 @@ nano /opt/groupintel/.env        # DASHSCOPE_API_KEY / CLIENT_TOKEN
 systemctl restart groupintel
 curl http://127.0.0.1:8000/api/health
 
-# 3. 阿里云控制台 → ECS → 安全组 → 入方向放行 8000/TCP（0.0.0.0/0 便于演示，赛后可收紧）
+# 3. 安全组放行 8000 —— 2026-11-21 已做好：sg-bp1g7et463zlxt43c22w 入方向「允许 / TCP / 0.0.0.0/0 / 8000/8000」
+#    （ECS 控制台 → 安全组 → 管理规则 → 入方向；赛前可收紧来源，但演示必须全开）
 
 # 4. 每次改动/下载后记一笔（仓库是组内共享的 lifeppppp/aigc_5，本项目在 group-intel/ 子目录）
 python scripts/log_and_push.py --action 部署 --note "ECS 中转站首次上线"
@@ -58,10 +69,11 @@ systemctl daemon-reload && systemctl enable --now groupintel
 systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
 ```
 
-### 环境要求（为什么这套代码能在老镜像上跑）
+### 环境要求（两种镜像都能跑）
 
-- 代码刻意保持在 **Python 3.8 可运行**：`server/app.py` 的请求模型用 `Optional[str]` / `List[dict]`，不用 `str | None`（3.10+）和 `list[dict]`（3.9+）。所以 **Ubuntu 20.04（自带 3.8）不用换镜像**也能部署。
-- 3.8 上 pip 会自动解析到最后支持它的这套依赖：`fastapi 0.124.4` / `pydantic 2.10.6` / `uvicorn 0.33.0`，接口行为与新版一致，不需要手工钉版本。
+- **实测这台实例是 Ubuntu 22.04.4 / Python 3.10.12**（购买页当年选的是 Ubuntu 20.04 自带 3.8，以控制台为准）。
+- 代码刻意保持 **Python 3.8 可运行**：`server/app.py` 的请求模型用 `Optional[str]` / `List[dict]`，不用 `str | None`（3.10+）和 `list[dict]`（3.9+）。这样 **20.04 和 22.04 两种镜像都能起**，重装系统也不用改代码，所以不改服务器配置。
+- 3.8 上 pip 会自动解析到最后支持它的这套依赖：`fastapi 0.124.4` / `pydantic 2.10.6` / `uvicorn 0.33.0`；3.10 上直接装最新版，接口行为一致，都不需要手工钉版本。
 - **2 GiB 内存的机器**上 `pip3 install` 如果直接打印 `Killed`，那是 OOM 被内核杀掉，不是包装错了。先试 `pip3 install --no-cache-dir -r server/requirements.txt`；反复被杀再考虑加一个 swap 文件（属于额外优化，不影响功能）。
 
 ## 二、接入百炼：组长四步（Key 只在这一步出现）
@@ -70,7 +82,7 @@ systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
 
 ### 第 1 步 建 Key、抄模型 ID（控制台里做）
 
-[bailian.console.aliyun.com](https://bailian.console.aliyun.com) → API-KEY → 创建，得到 `sk-` 开头的 Key；再去模型列表**复制确切的模型 ID**（`qwen-plus`、`qwen-long`、以及控制台新列出的型号），别凭印象手打。
+[bailian.console.aliyun.com](https://bailian.console.aliyun.com) → API-KEY → 创建，得到 `sk-` 开头的 Key（**本组 2026-11-21 建的是业务空间级 Key，前缀 `sk-ws-`，实测老域名 `dashscope.aliyuncs.com` 和业务空间专属域名都能用**，所以 `BAILIAN_BASE_URL` 不用改）；再去模型列表**复制确切的模型 ID**（`qwen-plus`、`qwen-long`、以及控制台新列出的型号），别凭印象手打。
 
 - 本组已采用 **`qwen3.7-plus`**（`llm.py` 默认值、`.env.example`、服务器 `.env` 三处一致）。若你的业务空间没开通它而报 404，把 `.env` 里的 `BAILIAN_MODEL` 改回 `qwen-plus` 就行，不用改代码。
 - Key 与域名**地域必须一致**：北京的 Key 打到新加坡域名会直接 `401 Invalid API-key provided`。
@@ -190,5 +202,6 @@ curl -s -X POST http://127.0.0.1:8000/api/summarize \
 ## 七、下一步
 
 - 打真安装包：`pyinstaller` 出 Windows exe；手机端用 PWABuilder 把站点封成 apk（需要 https）
-- 整理结果落库（sqlite）+ 按周聚合，给最后总结用
+- 结果的长期留存与按周聚合**走百炼侧**（智能体的知识库／应用数据），**不在 ECS 上建数据库**——按架构口径，数据处理和数据存放都在百炼那一侧
+- 中转层从兼容模式 `/chat/completions` 换成**百炼智能体 Application API**（需要 APP_ID，请求/响应结构不同）：等组长发话再动
 - 组员分工：1 人管钉钉应用配置、1 人管提示词效果、1 人管演示脚本与 ppt、1 人管文档
