@@ -61,7 +61,7 @@ python scripts/log_and_push.py --action 部署 --note "ECS 中转站首次上线
 
 ```bash
 mkdir -p /opt/groupintel && cd /opt/groupintel
-pip3 install -r server/requirements.txt --break-system-packages || pip3 install -r server/requirements.txt
+pip3 install -r server/requirements.txt || pip3 install -r server/requirements.txt --break-system-packages
 [ -f .env ] || cp .env.example .env
 chmod 600 .env
 cp server/groupintel.service /etc/systemd/system/groupintel.service
@@ -69,11 +69,11 @@ systemctl daemon-reload && systemctl enable --now groupintel
 systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
 ```
 
-### 环境要求（两种镜像都能跑）
+### 环境要求（服务器：Ubuntu 22.04 / Python 3.10）
 
-- **实测这台实例是 Ubuntu 22.04.4 / Python 3.10.12**（购买页当年选的是 Ubuntu 20.04 自带 3.8，以控制台为准；控制台镜像 ID `ubuntu_22_04_uefi_x64_20G_alibase_20240807.vhd`，旁边就有「更换」按钮）。组员自查：`cat /etc/os-release | head -2`、`python3 -V`。
-- 代码刻意保持 **Python 3.8 可运行**：`server/app.py` 的请求模型用 `Optional[str]` / `List[dict]`，不用 `str | None`（3.10+）和 `list[dict]`（3.9+）。这样 **20.04 和 22.04 两种镜像都能起**，重装系统也不用改代码，所以不改服务器配置。
-- 3.8 上 pip 会自动解析到最后支持它的这套依赖：`fastapi 0.124.4` / `pydantic 2.10.6` / `uvicorn 0.33.0`；3.10 上直接装最新版，接口行为一致，都不需要手工钉版本。
+- **这台 ECS 是 Ubuntu 22.04.4 / Python 3.10.12**，控制台镜像 ID `ubuntu_22_04_uefi_x64_20G_alibase_20240807.vhd`。组员自查：`cat /etc/os-release | head -2`、`python3 -V`。
+- 依赖直接装，不用钉版本：`pip3 install -r server/requirements.txt`，3.10 上解析到的就是当前最新的 fastapi / pydantic / uvicorn。
+- 代码仍然统一写 **Python 3.8 兼容**的注解：`server/app.py` 用 `Optional[str]` / `List[dict]`，不用 `str | None`（3.10+）和 `list[dict]`（3.9+）。**这是保险，不是被迫**——万一以后换镜像、或组员在自己电脑上直接 `import app` 调试，不会因为一个注解就整个服务起不来。
 - **2 GiB 内存的机器**上 `pip3 install` 如果直接打印 `Killed`，那是 OOM 被内核杀掉，不是包装错了。先试 `pip3 install --no-cache-dir -r server/requirements.txt`；反复被杀再考虑加一个 swap 文件（属于额外优化，不影响功能）。
 
 ## 二、接入百炼：组长四步（Key 只在这一步出现）
