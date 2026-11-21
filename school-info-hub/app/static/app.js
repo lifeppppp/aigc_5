@@ -58,6 +58,7 @@ async function loadConvs() {
 
 async function openConv(id) {
   convId = id;
+  $('#download-notes').disabled = false;
   const msgs = await api('/api/conversations/' + id);
   $('#chat-box').innerHTML = '';
   msgs.forEach((m) => addBubble(m.role === 'user' ? 'user' : 'bot', m.content));
@@ -104,7 +105,7 @@ async function send() {
         if (!line.startsWith('data:')) continue;
         const ev = JSON.parse(line.slice(5));
         if (ev.type === 'delta') { acc += ev.text; bot.textContent = acc; }
-        if (ev.type === 'done') { convId = ev.conversation_id; loadConvs(); }
+        if (ev.type === 'done') { convId = ev.conversation_id; $('#download-notes').disabled = false; loadConvs(); }
       }
       $('#chat-box').scrollTop = $('#chat-box').scrollHeight;
     }
@@ -116,7 +117,7 @@ $('#send').onclick = send;
 $('#msg').addEventListener('keydown', (e) => {
   if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
-$('#new-conv').onclick = () => { convId = null; $('#chat-box').innerHTML = '<div class="empty">新对话，输入问题开始。</div>'; loadConvs(); };
+$('#new-conv').onclick = () => { convId = null; $('#download-notes').disabled = true; $('#chat-box').innerHTML = '<div class="empty">新对话，输入问题开始。</div>'; loadConvs(); };
 
 /* ---------- dingtalk ---------- */
 async function loadStatus() {
@@ -216,4 +217,14 @@ $('#set-save').onclick = async () => {
 
 /* ---------- init ---------- */
 loadHealth();
-loadConvs();
+loadConvs();$('#download-notes').onclick = async () => {
+  if (!convId || sending) return;
+  try {
+    const r = await fetch('/api/conversations/' + convId + '/study-notes', {headers: {'X-Token': token()}});
+    if (!r.ok) throw new Error(r.status === 404 ? '请先完成一次问答再下载' : '下载失败，请检查访问令牌');
+    const url = URL.createObjectURL(await r.blob());
+    const a = document.createElement('a');
+    a.href = url; a.download = '学习资料-' + convId + '.txt'; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  } catch (e) { alert(e.message); }
+};

@@ -21,11 +21,12 @@
   <!-- 聊天 -->
   <section id="tab-chat" class="panel active">
     <aside id="conv-list">
+      <button id="download-notes" class="btn block" disabled>下载学习资料（TXT）</button>
       <button id="new-conv" class="btn primary block">＋ 新对话</button>
       <div id="convs"></div>
     </aside>
     <div id="chat-main">
-      <div id="chat-box"><div class="empty">向百炼模型提问，可勾选「联网搜索」让它搜集网上资料并整理。</div></div>
+      <div id="chat-box"><div class="empty">提问课程知识、解析习题或粘贴笔记；回答可下载为学习资料。</div></div>
       <div id="chat-input">
         <label class="chk"><input type="checkbox" id="search-toggle" checked> 联网搜索</label>
         <textarea id="msg" rows="2" placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
