@@ -57,14 +57,81 @@ systemctl daemon-reload && systemctl enable --now groupintel
 systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
 ```
 
-## 二、其他人怎么用
+## 二、接入百炼：组长四步（Key 只在这一步出现）
+
+代码不用重写，`server/llm.py` 已经封装好百炼的 OpenAI 兼容接口。组员要"接入大模型"，其实是在调下面这几个接口，不需要任何人拿到 Key。
+
+### 第 1 步 建 Key、抄模型 ID（控制台里做）
+
+[bailian.console.aliyun.com](https://bailian.console.aliyun.com) → API-KEY → 创建，得到 `sk-` 开头的 Key；再去模型列表**复制确切的模型 ID**（`qwen-plus`、`qwen-long`、以及控制台新列出的型号），别凭印象手打。
+
+- Key 与域名**地域必须一致**：北京的 Key 打到新加坡域名会直接 `401 Invalid API-key provided`。
+- 模型 ID 写错是 404 / `model_not_found`，跟余额和配额没关系，别往那边查。
+- 免费额度页看一眼、给这个业务空间设消费告警——这是全组唯一的算力成本来源。
+
+### 第 2 步 代码放上服务器
+
+FinalShell 文件面板把 `server/`、`web/`、`.env.example` 拖到 `/opt/groupintel/`（**永远不要拖 `.env`**），内置终端跑第一章那六条命令。已经跑过的话这步只是确认：`systemctl is-active groupintel` 输出 `active`。
+
+### 第 3 步 填 `.env` 三行然后重启
+
+```bash
+nano /opt/groupintel/.env
+systemctl restart groupintel
+```
+
+| 变量 | 填什么 |
+|---|---|
+| `DASHSCOPE_API_KEY` | 第 1 步那把 `sk-...` |
+| `BAILIAN_MODEL` | 第 1 步复制的模型 ID |
+| `CLIENT_TOKEN` | 自己定一串长随机字符。**必须填**：留空等于接口不设口令，`http://IP:8000` 对全世界开放，谁都能烧你们的算力 |
+
+`BAILIAN_BASE_URL` **不用动**，官方文档写明"现有域名仍可正常使用"，默认就是 `https://dashscope.aliyuncs.com/compatible-mode/v1`。想用业务空间专属域名（`https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`）就整行替换，注意 Key 的地域要跟着对上。
+
+### 第 4 步 两发 curl 定论，别看"服务启动了"就收工
+
+```bash
+curl -s http://127.0.0.1:8000/api/health
+```
+
+要看到 `"bailian_key_configured": true`。是 false 就是 `.env` 没生效——检查路径、`chmod 600`、以及有没有真的 restart。
+
+```bash
+curl -s -X POST http://127.0.0.1:8000/api/summarize \
+  -H 'Content-Type: application/json' -H 'X-Client-Token: 你的token' \
+  -d '{"text":"张三:明天上午10点交PPT初稿\n李四:我负责数据部分,周五前给\n张三:好,那周五下午一起评审","focus":"待办"}'
+```
+
+返回带 `topic / summary / todos / decisions / risks / keywords` 的 JSON，**服务器→百炼这一跳就算通了**。
+
+排错分界线：`127.0.0.1:8000` 通而 `http://公网IP:8000` 不通，是安全组没放行（第六章），跟 Key 和百炼一点关系，别去查 Key。
+
+### 交接给组员的就是这三样
+
+1. 地址 `http://你的IP:8000`
+2. `CLIENT_TOKEN` 的值（组员在自己软件的「设置」里填一次）
+3. 接口清单，全部要带 header `X-Client-Token`：
+
+| 接口 | 请求体 | 用途 |
+|---|---|---|
+| `POST /api/summarize` | `{"text":"群记录", "focus":"可选侧重", "model":"可选覆盖"}` | 群消息 → 结构化整理（演示主功能） |
+| `POST /api/chat` | `{"messages":[{"role":"user","content":"..."}], "model":"可选"}` | 裸对话，做问答/追问用 |
+| `POST /api/push-dingtalk` | `{"title":"标题", "text":"markdown"}` | 把结果回写到群机器人 |
+
+组员的活是钉钉应用配置（第四章）、提示词效果、前端和演示脚本，**不是**碰 Key。
+
+一句实话：组员登进来是 root，`cat /opt/groupintel/.env` 就能看到 Key。所以"Key 只留服务器"约束的是**发给外人的客户端**，在组内它是流程约定而不是技术隔离。真泄露了的处理办法：控制台重置 Key → 改掉 `.env` → `systemctl restart groupintel`，老 Key 立刻失效。
+
+改完记得记一笔：`python scripts/log_and_push.py --action 部署 --note "谁 + 接入百炼，模型用 xxx"`
+
+## 三、其他人怎么用
 
 - **电脑**：`python local/launcher.py --server 47.xx.xx.xx` → 独立应用窗口；或直接双击 `local/GroupIntel.bat 47.xx.xx.xx 8000`
 - **手机**：浏览器打开 `http://47.xx.xx.xx:8000`，菜单里「添加到主屏幕」就有图标了（同一套页面，已做移动端适配）
 - 第一次使用点右上「设置」，填入 `CLIENT_TOKEN`，防止别人白嫖你们的算力
 - 粘贴群聊 → 点「整理」→ 得到主题/摘要/待办(带负责人和时间)/决策/风险/关键词
 
-## 三、钉钉侧需要组员配合的两件事
+## 四、钉钉侧需要组员配合的两件事
 
 1. **群机器人 webhook**（回写整理结果用）：群设置 → 智能群助手 → 添加自定义机器人 → 安全设置选「加签」，把 Webhook 和 Secret 填进服务器 `.env`。
 2. **企业内部应用 + Stream 模式**（群里 @机器人 直接整理）：[open-dev.dingtalk.com](https://open-dev.dingtalk.com) 建应用 → 加机器人能力 → 消息接收模式选 **Stream** → 权限里勾上机器人收发消息 → 拿到 AppKey/AppSecret 填 `.env`，服务器上跑：
@@ -72,13 +139,13 @@ systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
    python /opt/groupintel/server/dingtalk_bot.py   # 建议也做成 systemd 服务
    ```
 
-## 四、已知限制（不是 bug，是平台规则）
+## 五、已知限制（不是 bug，是平台规则）
 
 - 钉钉**不允许**第三方程序静默拉取群里的全部历史消息。合规路线只有两条：① 群成员 **@机器人** 时把内容交给它（本仓库已实现）；② 客户端手动粘贴/上传记录（演示最稳）。要全量群消息只能买「会话存档」，需要企业资质，小组实验不建议。
 - 用 IP + 8000 端口直连是 HTTP，浏览器不会弹出「安装应用」按钮。要真正的安装包（apk / exe）见下一步计划。
 - 大陆 ECS 的 80/443 端口对外提供网页需要 ICP 备案，所以这里用非标端口，别纠结。
 
-## 五、组员怎么连上服务器改文件
+## 六、组员怎么连上服务器改文件
 
 全员（包括你自己）都是 **root + 密码** 登录，FinalShell 里不选公钥、不需要任何 `.pem` / `.pub` 文件。所以没有"分发钥匙"这件事，只剩两件事：安全组放行、协作约定。
 
@@ -112,7 +179,7 @@ systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
 - 改完代码重启服务：`systemctl restart groupintel`（你就是 root，不用 sudo）。
 - 想撤销某个人的访问：共用密码做不到单独撤销，只能改密码然后重新通知全员。以后要能单独踢人、或者把密码登录关掉，就得换成"每人一把自己的公钥登记到 `/root/.ssh/authorized_keys`"的路子，那时再来找我。
 
-## 六、下一步
+## 七、下一步
 
 - 打真安装包：`pyinstaller` 出 Windows exe；手机端用 PWABuilder 把站点封成 apk（需要 https）
 - 整理结果落库（sqlite）+ 按周聚合，给最后总结用
