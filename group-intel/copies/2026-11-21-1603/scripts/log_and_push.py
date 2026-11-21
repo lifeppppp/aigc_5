@@ -26,7 +26,7 @@ def git(*args, check=True):
     if os.path.exists(key):
         env["GIT_SSH_COMMAND"] = f'ssh -i "{key}" -o IdentitiesOnly=yes'
     return subprocess.run(
-        ["git", *args], cwd=str(ROOT), env=env, check=check,
+        ["git", "-c", "core.quotepath=false", *args], cwd=str(ROOT), env=env, check=check,
         capture_output=True, text=True, encoding="utf-8", errors="replace",
     )
 
