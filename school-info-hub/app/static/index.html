@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>校园信息助手</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <div class="brand">校园信息助手 <span id="model-badge" class="badge">检测中…</span></div>
+  <nav>
+    <button class="tab active" data-tab="chat">聊天</button>
+    <button class="tab" data-tab="dingtalk">钉钉消息</button>
+    <button class="tab" data-tab="docs">汇总文档</button>
+    <button class="tab" data-tab="settings">设置</button>
+  </nav>
+</header>
+
+<main>
+  <!-- 聊天 -->
+  <section id="tab-chat" class="panel active">
+    <aside id="conv-list">
+      <button id="new-conv" class="btn primary block">＋ 新对话</button>
+      <div id="convs"></div>
+    </aside>
+    <div id="chat-main">
+      <div id="chat-box"><div class="empty">向百炼模型提问，可勾选「联网搜索」让它搜集网上资料并整理。</div></div>
+      <div id="chat-input">
+        <label class="chk"><input type="checkbox" id="search-toggle" checked> 联网搜索</label>
+        <textarea id="msg" rows="2" placeholder="输入问题，Enter 发送，Shift+Enter 换行"></textarea>
+        <button id="send" class="btn primary">发送</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- 钉钉消息 -->
+  <section id="tab-dingtalk" class="panel">
+    <div id="dt-status" class="banner">…</div>
+    <div class="card">
+      <h3>手动导入群消息</h3>
+      <p class="hint">每行一条，格式「发送人：内容」或直接写内容。机器人接入后此入口仍可用。</p>
+      <input id="imp-group" placeholder="群名称，如：校学生会通知群">
+      <textarea id="imp-text" rows="5" placeholder="张三：周五 18:00 前提交社团年检材料&#10;李四：讲座改到周三晚 7 点，地点不变"></textarea>
+      <button id="imp-btn" class="btn primary">导入</button>
+      <span id="imp-result" class="hint"></span>
+    </div>
+    <div class="card">
+      <h3>已收集消息 <button id="msg-refresh" class="btn small">刷新</button></h3>
+      <select id="msg-group"><option value="">全部群</option></select>
+      <table id="msg-table"><thead><tr><th>时间</th><th>群</th><th>发送人</th><th>内容</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <!-- 汇总文档 -->
+  <section id="tab-docs" class="panel">
+    <div class="card">
+      <h3>生成重要信息汇总</h3>
+      <p class="hint">把收集到的群消息交给百炼模型提炼：通知、活动、截止时间、任务要求，输出 Markdown / Word 文档。</p>
+      <div class="row">
+        <select id="sum-group"><option value="">全部群</option></select>
+        <input id="sum-hours" type="number" min="1" placeholder="时间范围（小时，可空=全部）">
+        <button id="sum-btn" class="btn primary">生成汇总</button>
+      </div>
+      <span id="sum-result" class="hint"></span>
+    </div>
+    <div class="card">
+      <h3>历史文档 <button id="doc-refresh" class="btn small">刷新</button></h3>
+      <table id="doc-table"><thead><tr><th>标题</th><th>方式</th><th>时间</th><th>下载</th></tr></thead><tbody></tbody></table>
+    </div>
+  </section>
+
+  <!-- 设置 -->
+  <section id="tab-settings" class="panel">
+    <div class="card">
+      <h3>百炼模型</h3>
+      <label>API 地址<input id="set-base"></label>
+      <label>模型<input id="set-model" placeholder="qwen-plus"></label>
+      <label>API Key<input id="set-key" type="password" placeholder="拿到后粘贴，保存即生效"></label>
+      <label class="chk"><input type="checkbox" id="set-search"> 默认开启联网搜索</label>
+    </div>
+    <div class="card">
+      <h3>访问保护（可选）</h3>
+      <p class="hint">设置后所有接口需带令牌，防止公网被人滥用。留空则不校验。</p>
+      <label>访问令牌<input id="set-token" type="password" placeholder="留空 = 不启用"></label>
+    </div>
+    <div class="card disabled">
+      <h3>钉钉对接（预留）</h3>
+      <p class="hint">待确认能否在钉钉开放平台创建机器人后启用。凭证拿到后填入并开启开关即可接入。</p>
+      <label class="chk"><input type="checkbox" id="set-dt-enabled" disabled> 启用钉钉机器人</label>
+      <label>AppKey<input id="set-dt-key" disabled></label>
+      <label>AppSecret<input id="set-dt-secret" type="password" disabled></label>
+    </div>
+    <button id="set-save" class="btn primary">保存设置</button>
+    <span id="set-result" class="hint"></span>
+  </section>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
