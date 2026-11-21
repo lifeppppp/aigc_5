@@ -9,7 +9,7 @@
 本地客户端  launcher.py / 浏览器  ──►  ② 阿里云 ECS:8000 中转站 (FastAPI)
    ▲                                        │ ③ API Key 只留在服务器
    │                                        ▼
-   └──── 整理结果（摘要/待办/决策/风险） ◄── 阿里百炼 qwen-plus
+   └──── 整理结果（摘要/待办/决策/风险） ◄── 阿里百炼 qwen3.7-plus
                      │
                      └── 每次改动 → logs/ + copies/ → 推 GitHub（组员可回溯）
 ```
@@ -72,6 +72,7 @@ systemctl restart groupintel && curl -s http://127.0.0.1:8000/api/health
 
 [bailian.console.aliyun.com](https://bailian.console.aliyun.com) → API-KEY → 创建，得到 `sk-` 开头的 Key；再去模型列表**复制确切的模型 ID**（`qwen-plus`、`qwen-long`、以及控制台新列出的型号），别凭印象手打。
 
+- 本组已采用 **`qwen3.7-plus`**（`llm.py` 默认值、`.env.example`、服务器 `.env` 三处一致）。若你的业务空间没开通它而报 404，把 `.env` 里的 `BAILIAN_MODEL` 改回 `qwen-plus` 就行，不用改代码。
 - Key 与域名**地域必须一致**：北京的 Key 打到新加坡域名会直接 `401 Invalid API-key provided`。
 - 模型 ID 写错是 404 / `model_not_found`，跟余额和配额没关系，别往那边查。
 - 免费额度页看一眼、给这个业务空间设消费告警——这是全组唯一的算力成本来源。

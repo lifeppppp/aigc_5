@@ -14,7 +14,7 @@ def config():
     base_url = os.getenv(
         "BAILIAN_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1"
     ).rstrip("/")
-    model = os.getenv("BAILIAN_MODEL", "qwen-plus").strip()
+    model = os.getenv("BAILIAN_MODEL", "qwen3.7-plus").strip()
     return api_key, base_url, model
 
 
@@ -22,7 +22,7 @@ def key_configured():
     return bool(config()[0])
 
 
-def chat(messages, model=None, temperature=0.3, max_tokens=1500, timeout=120):
+def chat(messages, model=None, temperature=0.3, max_tokens=3000, timeout=120):
     """走 OpenAI 兼容接口，返回 (content, usage)。"""
     api_key, base_url, default_model = config()
     if not api_key:
