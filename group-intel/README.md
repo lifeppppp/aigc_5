@@ -105,6 +105,7 @@ systemctl restart groupintel
 | `DASHSCOPE_API_KEY` | 第 1 步那把 `sk-...` |
 | `BAILIAN_MODEL` | 第 1 步复制的模型 ID |
 | `CLIENT_TOKEN` | 自己定一串长随机字符。**必须填**：留空等于接口不设口令，`http://IP:8000` 对全世界开放，谁都能烧你们的算力 |
+| `INVITE_CODE` | 组内邀请码。网页第一次打开会让你输它，输对了服务端把 `CLIENT_TOKEN` 返回给浏览器存住，以后不用再输。留空则邀请码通道关闭（`/api/activate` 返回 503），只能手动填令牌 |
 
 `BAILIAN_BASE_URL` **不用动**，官方文档写明"现有域名仍可正常使用"，默认就是 `https://dashscope.aliyuncs.com/compatible-mode/v1`。想用业务空间专属域名（`https://{WorkspaceId}.cn-beijing.maas.aliyuncs.com/compatible-mode/v1`）就整行替换，注意 Key 的地域要跟着对上。
 
@@ -129,11 +130,12 @@ curl -s -X POST http://127.0.0.1:8000/api/summarize \
 ### 交接给组员的就是这三样
 
 1. 地址 `http://你的IP:8000`
-2. `CLIENT_TOKEN` 的值（组员在自己软件的「设置」里填一次）
-3. 接口清单，全部要带 header `X-Client-Token`：
+2. 邀请码（`INVITE_CODE` 的值）——组员在网页弹窗里输一次就行，令牌由服务端自动发给他们，**不用再把 `CLIENT_TOKEN` 粘来粘去**
+3. 接口清单，除 `/api/health` 和 `/api/activate` 外全部要带 header `X-Client-Token`：
 
 | 接口 | 请求体 | 用途 |
 |---|---|---|
+| `POST /api/activate` | `{"code":"邀请码"}` | 邀请码换令牌，只需一次；错了 403，服务端没配邀请码 503 |
 | `POST /api/summarize` | `{"text":"群记录", "focus":"可选侧重", "model":"可选覆盖"}` | 群消息 → 结构化整理（演示主功能） |
 | `POST /api/chat` | `{"messages":[{"role":"user","content":"..."}], "model":"可选"}` | 裸对话，做问答/追问用 |
 | `POST /api/push-dingtalk` | `{"title":"标题", "text":"markdown"}` | 把结果回写到群机器人 |
@@ -148,7 +150,7 @@ curl -s -X POST http://127.0.0.1:8000/api/summarize \
 
 - **电脑**：`python local/launcher.py --server 47.xx.xx.xx` → 独立应用窗口；或直接双击 `local/GroupIntel.bat 47.xx.xx.xx 8000`
 - **手机**：浏览器打开 `http://47.xx.xx.xx:8000`，菜单里「添加到主屏幕」就有图标了（同一套页面，已做移动端适配）
-- 第一次使用点右上「设置」，填入 `CLIENT_TOKEN`，防止别人白嫖你们的算力
+- 第一次打开会弹邀请码输入框，输入组长给的邀请码即可进入；令牌由服务端发给浏览器并记住，同一台设备/同一个浏览器以后不再问（清了浏览器数据要重输）
 - 粘贴群聊 → 点「整理」→ 得到主题/摘要/待办(带负责人和时间)/决策/风险/关键词
 
 ## 四、钉钉侧需要组员配合的两件事

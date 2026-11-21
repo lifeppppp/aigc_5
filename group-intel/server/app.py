@@ -56,6 +56,10 @@ class PushIn(BaseModel):
     text: str
 
 
+class ActivateIn(BaseModel):
+    code: str
+
+
 @app.get("/api/health")
 def health():
     _, _, model = llm.config()
@@ -65,7 +69,23 @@ def health():
         "model": model,
         "bailian_key_configured": llm.key_configured(),
         "dingtalk_robot_configured": dingtalk_push.configured(),
+        "invite_code_configured": bool(os.getenv("INVITE_CODE", "").strip()),
     }
+
+
+@app.post("/api/activate")
+def api_activate(body: ActivateIn):
+    """邀请码换令牌：输对这一次，之后客户端只带令牌访问，不再需要邀请码。"""
+    invite = os.getenv("INVITE_CODE", "").strip()
+    token = os.getenv("CLIENT_TOKEN", "").strip()
+    if not invite:
+        raise HTTPException(status_code=503, detail="服务器未配置 INVITE_CODE，邀请码通道已关闭")
+    if not token:
+        raise HTTPException(status_code=503, detail="服务器未配置 CLIENT_TOKEN，请联系管理员")
+    if body.code.strip() != invite:
+        time.sleep(1)  # 抬高公网爆破的代价
+        raise HTTPException(status_code=403, detail="邀请码不正确")
+    return {"ok": True, "token": token}
 
 
 @app.post("/api/summarize", dependencies=[Depends(verify_token)])

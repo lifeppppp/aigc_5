@@ -46,6 +46,14 @@ ul{margin:0;padding-left:18px}
 dialog{border:1px solid var(--line);border-radius:14px;padding:18px;max-width:420px;width:88vw}
 dialog label{display:block;margin:10px 0}
 dialog input{width:100%;margin-top:4px;padding:9px 11px;border:1px solid var(--line);border-radius:8px;font:inherit}
+.gate{position:fixed;inset:0;z-index:20;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+.gate[hidden]{display:none}
+.gate-box{width:100%;max-width:340px;background:var(--card);border:1px solid var(--line);border-radius:16px;
+  padding:22px;box-shadow:0 8px 28px rgba(35,48,68,.09)}
+.gate-box h2{margin:0 0 6px}
+.gate-box input{width:100%;margin-top:12px;padding:12px;border:1px solid var(--line);border-radius:10px;
+  font:inherit;letter-spacing:1px;background:#fcfdff}
+.gate-box input:focus{outline:2px solid var(--brand-soft);border-color:var(--brand)}
 .busy{pointer-events:none;opacity:.7}
 .err{background:#fdeeef;border:1px solid #f6c9d0;color:#a52a3f;padding:10px 12px;border-radius:10px;margin-top:10px}
 @media (max-width:640px){.grid2{grid-template-columns:1fr}.brand em{display:none}main{padding:12px}}

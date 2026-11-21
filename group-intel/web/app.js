@@ -181,6 +181,45 @@ async function push() {
   }
 }
 
+function isUnlocked() {
+  return !!store.token;
+}
+
+function refreshGate() {
+  $("gate").hidden = isUnlocked();
+  if (!isUnlocked()) $("codeInput").focus();
+}
+
+async function activate(code) {
+  $("gateBtn").disabled = true;
+  $("gateMsg").textContent = "校验中…";
+  try {
+    const r = await fetch(store.base + "/api/activate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code }),
+    });
+    const d = await r.json();
+    if (!r.ok) {
+      $("gateMsg").textContent = d.detail || `激活失败 (${r.status})`;
+      return;
+    }
+    store.token = d.token;
+    refreshGate();
+    checkHealth();
+  } catch (e) {
+    $("gateMsg").textContent = "连不上服务器，点右上「设置」检查地址";
+  } finally {
+    $("gateBtn").disabled = false;
+  }
+}
+
+$("gateForm").onsubmit = (ev) => {
+  ev.preventDefault();
+  const code = $("codeInput").value.trim();
+  if (code) activate(code);
+};
+
 $("runBtn").onclick = run;
 $("pushBtn").onclick = push;
 $("sampleBtn").onclick = () => { $("chatInput").value = SAMPLE; $("meta").textContent = "已填入示例，可直接点「整理」"; };
@@ -198,6 +237,7 @@ $("fileInput").onchange = (ev) => {
   reader.readAsText(f, "utf-8");
 };
 $("settingsBtn").onclick = () => {
+  if (!isUnlocked()) return;
   $("cfgBase").value = localStorage.getItem("gi_base") || "";
   $("cfgToken").value = store.token;
   $("settings").showModal();
@@ -206,11 +246,13 @@ $("settings").onclose = () => {
   if ($("settings").returnValue === "ok") {
     store.base = $("cfgBase").value.trim().replace(/\/$/, "");
     store.token = $("cfgToken").value.trim();
+    refreshGate();
     checkHealth();
   }
 };
 
-checkHealth();
+refreshGate();
+if (isUnlocked()) checkHealth();
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) {
   navigator.serviceWorker.register("/static/sw.js").catch(() => {});
 }

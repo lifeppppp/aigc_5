@@ -10,6 +10,18 @@
 <link rel="stylesheet" href="/static/style.css">
 </head>
 <body>
+<div class="gate" id="gate" hidden>
+  <form class="gate-box" id="gateForm">
+    <h2>群情报助手</h2>
+    <p class="hint">请输入组内邀请码。只需输入一次，之后这台设备直接可用。</p>
+    <input id="codeInput" placeholder="邀请码" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="actions">
+      <button class="primary" type="submit" id="gateBtn">进入</button>
+      <span class="meta" id="gateMsg"></span>
+    </div>
+  </form>
+</div>
+
 <header>
   <div class="brand">
     <span class="dot" id="statusDot"></span>
@@ -56,8 +68,8 @@
   <form method="dialog">
     <h3>服务器设置</h3>
     <label>服务器地址<input id="cfgBase" placeholder="http://你的公网IP:8000"></label>
-    <label>访问令牌<input id="cfgToken" placeholder="客户端令牌（与服务器 .env 中 CLIENT_TOKEN 一致）"></label>
-    <p class="hint">直接用手机浏览器访问服务器地址时，这两项可留空。</p>
+    <label>访问令牌<input id="cfgToken" placeholder="留空则用邀请码自动获取"></label>
+    <p class="hint">令牌一般不用手填：首次打开页面输入邀请码即可自动获取。清空令牌会重新跳出邀请码界面。</p>
     <div class="actions"><button class="primary" value="ok">保存</button><button value="cancel">取消</button></div>
   </form>
 </dialog>
