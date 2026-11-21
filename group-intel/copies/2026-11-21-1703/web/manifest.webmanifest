@@ -1,0 +1,12 @@
+{
+  "name": "群情报助手",
+  "short_name": "群情报",
+  "description": "钉钉工作群信息自动整理，经 ECS 中转调用阿里百炼大模型",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f8fb",
+  "theme_color": "#3b82f6",
+  "icons": [
+    { "src": "/static/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ]
+}
