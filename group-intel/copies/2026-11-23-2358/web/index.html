@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#f6f8fb">
+<title>群情报助手</title>
+<link rel="manifest" href="/static/manifest.webmanifest">
+<link rel="icon" href="/static/icon.svg">
+<link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+<div class="gate" id="gate" hidden>
+  <form class="gate-box" id="gateForm">
+    <h2>群情报助手</h2>
+    <p class="hint">请输入组内邀请码。只需输入一次，之后这台设备直接可用。</p>
+    <input id="codeInput" placeholder="邀请码" autocomplete="off" autocapitalize="off" spellcheck="false">
+    <div class="actions">
+      <button class="primary" type="submit" id="gateBtn">进入</button>
+      <span class="meta" id="gateMsg"></span>
+    </div>
+  </form>
+</div>
+
+<header>
+  <div class="brand">
+    <span class="dot" id="statusDot"></span>
+    <strong>群情报助手</strong>
+    <em id="statusText">连接中…</em>
+  </div>
+  <button class="ghost" id="settingsBtn">设置</button>
+</header>
+
+<main>
+  <section class="card">
+    <div class="card-head">
+      <h2>1. 群聊内容</h2>
+      <div class="tools">
+        <button class="link" id="sampleBtn">填入示例</button>
+        <label class="link">上传 .txt<input type="file" id="fileInput" accept=".txt,.log,.md" hidden></label>
+        <button class="link" id="clearBtn">清空</button>
+      </div>
+    </div>
+    <textarea id="chatInput" placeholder="把钉钉工作群里的聊天记录粘贴到这里，或上传导出的 txt。"></textarea>
+    <input id="focusInput" placeholder="额外关注（可选）：例如「只挑出我下周要交的东西」">
+    <div class="actions">
+      <button class="primary" id="runBtn">整理</button>
+      <button id="pushBtn" disabled>推送到钉钉群</button>
+      <button id="copyBtn" disabled>复制结果</button>
+      <span class="meta" id="meta"></span>
+    </div>
+  </section>
+
+  <section class="card" id="resultCard" hidden>
+    <div class="card-head"><h2>2. 整理结果</h2><span class="meta" id="resultBadge"></span></div>
+    <h3 id="rTopic"></h3>
+    <p id="rSummary" class="summary"></p>
+    <div id="rTodos"></div>
+    <div class="grid2">
+      <div id="rDecisions"></div>
+      <div id="rRisks"></div>
+    </div>
+    <div class="tags" id="rKeywords"></div>
+  </section>
+</main>
+
+<dialog id="settings">
+  <form method="dialog">
+    <h3>服务器设置</h3>
+    <label>服务器地址<input id="cfgBase" placeholder="http://你的公网IP:8000"></label>
+    <label>访问令牌<input id="cfgToken" placeholder="留空则用邀请码自动获取"></label>
+    <p class="hint">令牌一般不用手填：首次打开页面输入邀请码即可自动获取。清空令牌会重新跳出邀请码界面。</p>
+    <div class="actions"><button class="primary" value="ok">保存</button><button value="cancel">取消</button></div>
+  </form>
+</dialog>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

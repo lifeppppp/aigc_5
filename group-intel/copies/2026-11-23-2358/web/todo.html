@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>校园待办助手</title>
+<meta name="theme-color" content="#f2f4f8">
+<link rel="stylesheet" href="/static/todo.css">
+</head>
+<body>
+<div class="device" id="device">
+  <!-- 顶栏 -->
+  <div class="top">
+    <div class="tabs">
+      <div class="tab on" data-tab="cal">日历</div>
+      <div class="tab" data-tab="ai">智能体</div>
+      <div class="tab" data-tab="tpl">模板</div>
+      <div class="tab" data-tab="set">设置</div>
+    </div>
+    <div class="more">⋯</div>
+  </div>
+
+  <!-- ============ 视图：日历 ============ -->
+  <div class="view on" id="view-cal">
+    <div class="pad">
+      <div class="monthbar">
+        <div class="navbtn" id="prevM">‹</div>
+        <b id="monthLabel">2026 年 11 月</b>
+        <div class="navbtn" id="nextM">›</div>
+      </div>
+      <div class="wk"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+      <div class="grid" id="grid"></div>
+
+      <div class="sec">
+        <div class="sec-head"><b id="dayLabel">今天 · 11月21日</b><span id="dayCount"></span></div>
+        <div id="taskList"></div>
+      </div>
+    </div>
+  </div>
+  <div class="bottom" id="calBottom">
+    <div class="bar-btn ghost" id="addTaskBtn">＋ 添加待办</div>
+    <div class="bar-btn solid" data-go="ai">问智能体</div>
+  </div>
+
+  <!-- ============ 视图：智能体 ============ -->
+  <div class="view" id="view-ai">
+    <div id="aiEmpty" class="ai-empty">
+      <div class="ai-card">
+        <h2>问点什么吧</h2>
+        <div class="inputrow">
+          <input id="aiInput0" placeholder="问我、传文件、或扒资料…">
+          <div class="attach">＋</div>
+          <button class="send" id="aiSend0">发送</button>
+        </div>
+        <div class="chips">
+          <span class="chip" data-fill="帮我查一下这学期 AIGC 竞赛的提交要求">帮我查下竞赛提交要求</span>
+          <span class="chip" data-fill="把这条通知整理成待办：11月21日24点前提交项目代码">把通知整理成待办</span>
+          <span class="chip" data-fill="给我一条这学期的学习路径建议">给我一条学习路径</span>
+        </div>
+        <div class="recentline">最近查过：图书馆几点关门 →</div>
+        <div class="apiline" id="apiState">接口：未配置 · 用示例回答</div>
+      </div>
+    </div>
+
+    <div id="aiChatWrap" style="display:none;flex:1;display:none;flex-direction:column;min-height:0">
+      <div class="chat" id="chat"></div>
+    </div>
+
+    <div class="bottom" id="aiBottom" style="display:none">
+      <div class="inputrow" style="flex:1">
+        <input id="aiInput" placeholder="继续追问…">
+        <div class="attach">＋</div>
+      </div>
+      <button class="send" id="aiSend">发送</button>
+    </div>
+  </div>
+
+  <!-- ============ 视图：模板 ============ -->
+  <div class="view" id="view-tpl">
+    <div class="pad">
+      <div class="search">
+        <span style="color:var(--faint)">🔍</span>
+        <input id="tplSearch" placeholder="你想做什么？输入需求，或直接选下面的模板">
+      </div>
+
+      <div class="tpl-grid" id="tplGrid">
+        <div class="tpl" data-tpl="答辩PPT">
+          <div class="ico">📊</div>
+          <h4>答辩 PPT 大纲</h4>
+          <p>项目背景 / 方案 / 效果，三页结构</p>
+        </div>
+        <div class="tpl" data-tpl="课程汇报">
+          <div class="ico">📄</div>
+          <h4>课程汇报</h4>
+          <p>章节摘要 + 重点 + 结论</p>
+        </div>
+        <div class="tpl" data-tpl="周计划表">
+          <div class="ico">🗓</div>
+          <h4>学习周计划</h4>
+          <p>按天拆分任务，可直接进日历</p>
+        </div>
+        <div class="tpl" data-tpl="通知整理">
+          <div class="ico">📌</div>
+          <h4>通知整理</h4>
+          <p>把群里的长通知拆成待办条目</p>
+        </div>
+      </div>
+
+      <div class="tpl-note">模板来自内置库，AI 按你的需求推荐，不联网抓取。</div>
+    </div>
+  </div>
+  <div class="bottom" id="tplBottom">
+    <div class="bar-btn solid" id="tplGen">选择模板后生成</div>
+  </div>
+
+  <!-- ============ 视图：设置 ============ -->
+  <div class="view" id="view-set">
+    <div class="pad">
+      <div class="gtitle">模型接口（调试用）</div>
+      <div class="group">
+        <div class="apirow">
+          <div class="sub">本页面由中转服务托管，默认已经接上大模型，这里什么都不用填。只有换模型或排错才动。</div>
+          <input id="epInput" class="fldin" placeholder="接口地址（默认 /compatible-mode/v1/chat/completions）">
+          <input id="modelInput" class="fldin" placeholder="模型名（留空＝用服务端默认 qwen3.7-plus）">
+          <input id="keyInput" class="fldin" placeholder="访问令牌（可用下面的邀请码自动获取）">
+          <input id="codeInput" class="fldin" placeholder="组内邀请码（只需一次）">
+          <div class="apibox">
+            <button class="syncbtn" id="codeBtn">邀请码激活</button>
+            <button class="syncbtn" id="apiSave">保存</button>
+            <button class="syncbtn" id="apiTest">测试连接</button>
+          </div>
+          <div class="apitip" id="apiTip">当前：已接中转站</div>
+        </div>
+      </div>
+
+      <div class="gtitle">数据来源</div>
+      <div class="group" id="srcGroup">
+        <div class="row">
+          <div><div>竞赛通知群</div><div class="sub">已同步 · 10 分钟前</div></div>
+          <button class="syncbtn" data-sync>同步</button>
+        </div>
+        <div class="row">
+          <div><div>教务处官网</div><div class="sub">已同步 · 昨天 18:20</div></div>
+          <button class="syncbtn" data-sync>同步</button>
+        </div>
+        <div class="row">
+          <div><div>图书馆公众号</div><div class="sub" style="color:#c98a2f">未同步 · 3 天前</div></div>
+          <button class="syncbtn" data-sync>同步</button>
+        </div>
+      </div>
+
+      <div class="gtitle">截止提醒</div>
+      <div class="group">
+        <div class="radio" id="radioGroup">
+          <div data-r="off">不提醒</div>
+          <div data-r="1h" class="on">提前 1 小时</div>
+          <div data-r="1d">提前 1 天</div>
+        </div>
+      </div>
+
+      <div class="gtitle">其他</div>
+      <div class="group">
+        <div class="row"><span class="danger" id="clearBtn">清空所有数据</span><span style="color:var(--faint)">›</span></div>
+      </div>
+
+      <div class="about">
+        校园待办助手 v1.0<br>
+        AIGC 竞赛 · 第 5 组<br>
+        原型界面 · 待办为示例数据<br>
+        智能体已接中转站真实大模型
+      </div>
+    </div>
+  </div>
+
+  <!-- 添加待办弹层 -->
+  <div class="sheet" id="sheet">
+    <div class="sheet-in">
+      <h3>添加待办</h3>
+      <div class="fld"><label>要做什么</label><input id="newTitle" placeholder="例如：交四级报名表"></div>
+      <div class="fld"><label>截止时间（可不填）</label><input id="newDdl" placeholder="例如：明天 18:00"></div>
+      <div class="sheet-btns">
+        <div class="bar-btn ghost" id="sheetCancel" style="border-color:#d8dde7;color:var(--sub)">取消</div>
+        <div class="bar-btn solid" id="sheetSave">保存</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+</div>
+<script src="/static/todo.js"></script>
+</body>
+</html>

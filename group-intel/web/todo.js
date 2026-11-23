@@ -29,7 +29,17 @@ function resetTasks(){
     {id:7, title:'填教学反馈问卷', date:'', ddl:'', source:'教务通知群 · 昨天提取', urgent:false, done:false}
   ];
 }
-resetTasks();
+const TASKS_KEY = 'todo-tasks';
+function saveTasks(){
+  try { localStorage.setItem(TASKS_KEY, JSON.stringify(state.tasks)); } catch(e){}
+}
+function loadTasks(){
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(TASKS_KEY) || 'null'); } catch(e){}
+  if(Array.isArray(saved) && saved.length) state.tasks = saved;
+  else { resetTasks(); saveTasks(); }
+}
+loadTasks();
 
 /* ================= 通用 ================= */
 const $ = s => document.querySelector(s);
@@ -183,6 +193,7 @@ function taskEl(t){
     '</div>';
   el.querySelector('.cb').onclick = ()=>{
     t.done = !t.done;
+    saveTasks();
     renderCal();
     toast(t.done ? '已完成：' + t.title : '已恢复：' + t.title);
   };
@@ -215,6 +226,7 @@ $('#sheetSave').onclick = ()=>{
     source: '手动添加', urgent: !!$('#newDdl').value.trim(), done:false
   });
   $('#sheet').classList.remove('on');
+  saveTasks();
   renderCal();
   toast('已添加到 ' + $('#dayLabel').textContent);
 };
@@ -231,8 +243,9 @@ let AI = Object.assign({}, AI_DEFAULT);
 try { AI = Object.assign({}, AI_DEFAULT, JSON.parse(localStorage.getItem('todo-ai') || '{}')); } catch(e){}
 if(!AI.key) AI.key = localStorage.getItem('gi_token') || '';
 
-const AI_SYSTEM = '你是杭电校园待办助手。回答要短，尽量给出信息出处（群名/官网/公众号）。' +
-  '如果用户给了一段通知，直接把它拆成 1-3 条待办，每条写清截止时间。';
+const AI_SYSTEM = '你是杭电校园待办助手。今天是 ' + TODAY_KEY + '。回答要短，尽量给出信息出处（群名/官网/公众号）。' +
+  '如果用户给了一段通知，把它拆成 1-6 条待办，每条单独一行，格式固定为「序号. 事项（截止 YYYY-MM-DD HH:mm）」，' +
+  '没有明确截止时间就省略括号；末尾可以补一句出处。';
 let history = [];          // 多轮对话上下文
 let lastQ = '';            // 上一次提问，供“再问一次”用
 
@@ -249,7 +262,7 @@ async function askModel(text){
   if(AI.key) headers['Authorization'] = 'Bearer ' + AI.key;
 
   const ctrl = new AbortController();
-  const timer = setTimeout(()=>ctrl.abort(), 45000);
+  const timer = setTimeout(()=>ctrl.abort(), 90000);
   const payload = {
     messages: [{role:'system', content:AI_SYSTEM}].concat(history.slice(-10)),
     stream: false
@@ -276,7 +289,7 @@ async function askModel(text){
         || (data && (data.reply || data.answer || data.text || data.content || (data.data && data.data.reply)));
   if(typeof p !== 'string') throw new Error('返回格式不认识 → ' + raw.slice(0,260));
   history.push({role:'assistant', content:p});
-  return {text: p};
+  return {text: p, model: data.model || ''};
 }
 
 function apiStateText(){
@@ -313,7 +326,11 @@ async function startChat(text){
 
   let r;
   try { r = await askModel(text); }
-  catch(err){ r = {error: err.message || '请求失败'}; }
+  catch(err){
+    r = {error: err && err.name === 'AbortError'
+      ? '模型 90 秒没返回，可能被中断了，再问一次试试'
+      : (err.message || '请求失败')};
+  }
 
   removeTyping();
   if(r.error) addError(r.error); else addAnswer(r);
@@ -322,7 +339,7 @@ async function startChat(text){
 function addMe(text){
   const el = document.createElement('div');
   el.className='msg me';
-  el.innerHTML = '<div class="bub">'+text+'</div>';
+  el.innerHTML = '<div class="bub">'+esc(text)+'</div>';
   $('#chat').appendChild(el);
   $('#chat').scrollTop = $('#chat').scrollHeight;
 }
@@ -335,7 +352,7 @@ function addTyping(){
   const h = document.createElement('div');
   h.className='hintline'; h.id='typingHint';
   h.textContent = AI.endpoint
-    ? '正在请求模型 · ' + (AI.model || 'default') + ' …'
+    ? '正在请求模型 · ' + (AI.model || 'ECS 中转站') + ' …'
     : '正在检索：竞赛通知群 · 教务处官网 · 已读取 2 个文件…';
   $('#chat').appendChild(h);
   $('#chat').scrollTop = $('#chat').scrollHeight;
@@ -344,19 +361,88 @@ function removeTyping(){
   const t = $('#typingMsg'); if(t) t.remove();
   const h = $('#typingHint'); if(h) h.remove();
 }
+/* 模型回答的文本 → 待办条目：认得绝对日期和「今天/明天」，认不出的进未排期 */
+function extractTodos(text){
+  const soon = new Date(TODAY); soon.setDate(soon.getDate()+2);
+  const soonKey = fmt(soon);
+  const out = [];
+  String(text || '').split(/\r?\n/).forEach(line=>{
+    const raw = line.replace(/[*_`>#]/g,'').trim();
+    if(raw.length < 4) return;
+    if(/出处|来源|建议|以上|备注/.test(raw)) return;
+    const body = raw.replace(/^(?:\d+[.、)]|[-•·])\s*/,'').trim();
+    const dm = body.match(/(20\d{2})[-/.](\d{1,2})[-/.](\d{1,2})/);
+    const md = body.match(/(\d{1,2})月(\d{1,2})日/);
+    const rel = body.match(/今天|明天|后天|大后天|本周[一二三四五六日]/);
+    const dated = !!(dm || md || rel);
+    const numbered = /^(?:\d+[.、)]|[-•·])\s*/.test(raw);
+    const tasky = /截止|到期|提交|完成|报名|确认|填写|交|打印|上传|准备/.test(body);
+    if(!numbered && !(dated && tasky)) return;
+    let date = '';
+    if(dm) date = dm[1] + '-' + String(+dm[2]).padStart(2,'0') + '-' + String(+dm[3]).padStart(2,'0');
+    else if(md){
+      const y = TODAY.getFullYear();
+      const d = new Date(y, +md[1]-1, +md[2]);
+      date = fmt(d) < TODAY_KEY ? fmt(new Date(y+1, +md[1]-1, +md[2])) : fmt(d);
+    } else if(rel){
+      const d = new Date(TODAY);
+      const offset = {'今天':0,'明天':1,'后天':2,'大后天':3}[rel[0]];
+      if(offset === undefined){
+        const want = '一二三四五六日'.indexOf(rel[0].slice(-1)) + 1;
+        d.setDate(d.getDate() + ((want - d.getDay() + 7) % 7 || 7));
+      } else d.setDate(d.getDate() + offset);
+      date = fmt(d);
+    }
+    const tm = body.match(/(\d{1,2})[:：](\d{2})/);
+    const ddl = date ? 'DDL ' + date.slice(5).replace('-','/') + (tm ? ' ' + tm[1] + ':' + tm[2] : '') : '';
+    let title = body.replace(/[（(][^（()）]*(?:截止|DDL|ddl|前|到期)[^（()）]*[)）]/g,' ');
+    title = title.replace(/(20\d{2})[-/.]\d{1,2}[-/.]\d{1,2}/g,' ').replace(/\d{1,2}月\d{1,2}日/g,' ');
+    title = title.replace(/(今天|明天|后天|大后天|本周[一二三四五六日])\s*(\d{1,2}[:：]\d{2})?\s*(?:截止|到期)?\s*前?/g,' ');
+    title = title.replace(/\d{1,2}[:：]\d{2}\s*前?/g,' ');
+    title = title.replace(/[，,、]?\s*(?:截止|到期)?\s*前?\s*$/,'');
+    title = title.replace(/\s+/g,' ').replace(/^[，,、;：:\-—\s]+|[，,、;：:\-—\s]+$/g,'').trim();
+    if(title.length < 3) return;
+    out.push({
+      id: Date.now() + out.length, title, date, ddl,
+      source: '智能体 · 刚刚提取',
+      urgent: !!tm || (!!date && date <= soonKey),
+      done: false
+    });
+  });
+  return out.slice(0, 6);
+}
+
+function addTodos(list){
+  let added = 0, dup = 0;
+  list.forEach(t=>{
+    if(state.tasks.some(x=>x.title===t.title && x.date===t.date)){ dup++; return; }
+    state.tasks.push(t); added++;
+  });
+  saveTasks();
+  if(!added){ toast(dup ? '这几条已经在日历里了' : '没认出可加入的待办'); return; }
+  const first = list.find(t=>t.date);
+  if(first) state.picked = first.date;
+  renderCal();
+  toast('已加入 ' + added + ' 条待办' + (dup ? '，' + dup + ' 条重复' : ''));
+  setTimeout(()=> document.querySelector('.tab[data-tab="cal"]').click(), 700);
+}
+
 function addAnswer(r){
   const el = document.createElement('div');
   el.className='msg ai';
   el.style.maxWidth='88%';
+  const todos = r.demo ? [] : extractTodos(r.text);
   const bodyHtml = r.demo ? QA.a : esc(r.text);
   const srcHtml = r.demo
     ? '<div class="srcbox"><b>来源：'+QA.src+'</b><br>更新于 '+QA.date+' · 共 2 处 ▾</div>'
-    : '<div class="srcbox"><b>来源：模型接口</b><br>'+(AI.model || 'default')+' · 刚刚返回</div>';
+    : '<div class="srcbox"><b>来源：模型接口</b><br>'+(r.model || AI.model || '中转站默认模型')+' · 刚刚返回</div>';
   el.innerHTML =
     '<div class="bub">'+bodyHtml+'</div>' +
     srcHtml +
     '<div class="acts"><button class="mini" data-copy>复制</button><button class="mini" data-again>再问一次</button></div>' +
-    (r.demo ? '<button class="addcal" data-addcal>＋ 把「提交材料」加入日历</button>' : '');
+    (r.demo
+      ? '<button class="addcal" data-addcal>＋ 把「提交材料」加入日历</button>'
+      : (todos.length ? '<button class="addcal" data-addcal>＋ 把这 ' + todos.length + ' 条待办加入日历</button>' : ''));
   $('#chat').appendChild(el);
   $('#chat').scrollTop = $('#chat').scrollHeight;
 
@@ -368,16 +454,11 @@ function addAnswer(r){
   el.querySelector('[data-again]').onclick = ()=> startChat(lastQ || QA.q);
   const ada = el.querySelector('[data-addcal]');
   if(ada) ada.onclick = ()=>{
-    if(state.tasks.some(t=>t.title==='提交 AIGC 赛题材料' && t.date===TODAY_KEY)){
-      toast('已经在日历里了'); return;
-    }
-    state.tasks.push({
+    if(!r.demo){ addTodos(todos); return; }
+    addTodos([{
       id: Date.now(), title:'提交 AIGC 赛题材料', date:TODAY_KEY,
       ddl:'DDL 今晚 24:00', source:'智能体 · 刚刚加入', urgent:true, done:false
-    });
-    toast('已加入今天的日历');
-    renderCal();
-    setTimeout(()=> document.querySelector('.tab[data-tab="cal"]').click(), 700);
+    }]);
   };
 }
 
@@ -388,8 +469,8 @@ function addError(msg){
   el.style.maxWidth='92%';
   el.innerHTML =
     '<div class="bub err"><b>接口报错了</b><br>' + esc(msg) +
-    '<div class="errhint">排查顺序：① 地址能不能在浏览器里打开 ② 后端是否允许跨域（CORS）' +
-    '③ 模型名对不对 ④ 路径是否 /v1/chat/completions</div></div>' +
+    '<div class="errhint">排查顺序：① 401/403 是令牌问题，去「设置 → 邀请码激活」重新激活一次' +
+    '② 404 是模型名不对，模型框留空即可 ③ 地址请保持默认的 /compatible-mode/v1/chat/completions ④ 超时再重试</div></div>' +
     '<div class="acts"><button class="mini" data-again>重试一次</button></div>';
   $('#chat').appendChild(el);
   $('#chat').scrollTop = $('#chat').scrollHeight;
@@ -465,6 +546,7 @@ $$('#radioGroup div').forEach(r=>{
 $('#clearBtn').onclick = ()=>{
   if(confirm('清空所有待办？演示数据会恢复初始状态')){
     resetTasks();
+    saveTasks();
     state.picked = TODAY_KEY;
     renderCal();
     toast('已重置');
@@ -500,6 +582,7 @@ if($('#codeBtn')) $('#codeBtn').onclick = async ()=>{
     if(!r.ok){ tip.textContent = '激活失败：' + (d.detail || r.status); return; }
     AI.key = d.token;
     if($('#keyInput')) $('#keyInput').value = d.token;
+    localStorage.setItem('gi_token', d.token);
     saveApi();
     tip.textContent = '已拿到令牌，回智能体页直接提问';
     toast('激活成功');

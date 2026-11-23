@@ -154,6 +154,12 @@ def index():
     return FileResponse(os.path.join(WEB_DIR, "index.html"))
 
 
+@app.get("/todo.html")
+def todo_page():
+    """校园待办草模的短地址，等价于 /static/todo.html"""
+    return FileResponse(os.path.join(WEB_DIR, "todo.html"))
+
+
 @app.exception_handler(Exception)
 async def unhandled(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": f"服务器内部错误: {exc}"})
