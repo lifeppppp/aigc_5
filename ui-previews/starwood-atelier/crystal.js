@@ -25,10 +25,8 @@
     pointer.x = (event.clientX / innerWidth - .5) * 2;
     pointer.y = (event.clientY / innerHeight - .5) * 2;
   }, {passive:true});
-  dock.querySelector('button').onclick = () => {
-    const first = (tasks[selected] || []).find(task => !task.done);
-    speak(first ? '先从这件小事开始吧：'+first.title : '今天的节奏，由你决定。随时可以写下一个新目标。');
-  };
+  dock.querySelector('button').onclick = () => window.StarwoodChat?.open();
+  window.addEventListener('starwood:celebrate', () => speak('又完成了一件事。给认真努力的你一点星光。'));
   document.querySelectorAll('[data-panel]').forEach(button => button.addEventListener('click', () => {
     const words = {calendar:'一起把今天安排得轻松一点。',notes:'想法不用一次写完，先记下一句。',orbit:'我叫烁。你的每一点进步，我都记得。'};
     speak(words[button.dataset.panel]);
@@ -42,7 +40,8 @@
   document.querySelector('#taskForm').addEventListener('submit', () => {
     if (document.querySelector('#taskTitle').value.trim()) speak('记下了。一步一步，事情就会变简单。');
   }, true);
-  document.querySelector('#sprite').addEventListener('click', () => speak('我在。轻触「展开今日计划」，一起看看下一步。'));
+  document.querySelector('#sprite').addEventListener('click', () => speak('我在。你可以问我学习问题，也可以让我帮你看看今天的计划。'));
+  window.addEventListener('starwood:chat-reply', () => { reaction = .7; });
   function pathBody(ctx) {
     ctx.beginPath();
     ctx.moveTo(180,89);
