@@ -142,3 +142,77 @@ body.arrival-open{overflow:hidden}
 .arrival-copy{transition:opacity .5s,top .7s var(--ease)}
 .arrival-dialog[data-state=forming] .arrival-copy,.arrival-dialog[data-state=friend] .arrival-copy{top:16%}
 @media(max-width:720px){.arrival-dialog[data-state=forming] .arrival-copy,.arrival-dialog[data-state=friend] .arrival-copy{top:21%}}
+
+/* The companion room opens as a quiet celestial observatory. */
+body[data-active-panel=orbit] .intro{display:none}
+body[data-active-panel=orbit] .desk{margin-top:6px;background:linear-gradient(125deg,#10253d,#122c46 55%,#0c2038);border-color:#b3cbd33b;box-shadow:0 24px 65px #04112040,inset 0 1px #c6d8d917}
+body[data-active-panel=orbit] .desk-edge{border-color:#cdbd9228}
+body[data-active-panel=orbit] .rail{border-right:1px solid #adc5cf10}
+body[data-active-panel=orbit] .rail-btn{color:#839dad}
+body[data-active-panel=orbit] .rail-btn:hover{background:#b7d1dc08}
+body[data-active-panel=orbit] .rail-btn.active{background:#c7d9e110;box-shadow:inset 0 1px #dce8e619;color:#e9d6a7}
+body[data-active-panel=orbit] .rail-btn span{color:#c2b58d}
+body[data-active-panel=orbit] .rail-line{border-color:#8ca6b123}
+body[data-active-panel=orbit] .vertical-label{display:none}
+body[data-active-panel=orbit] .wood-label{color:#9c9a85}
+body[data-active-panel=orbit] .engraving{color:#94acb8;letter-spacing:2px;font-size:10px}
+body[data-active-panel=orbit] .local-tag,body[data-active-panel=orbit] .desk-footer,body[data-active-panel=orbit] .companion-dock{display:none}
+body[data-active-panel=orbit] .workarea{padding-bottom:24px}
+.orbit-panel{overflow:hidden;position:relative;isolation:isolate;padding:29px 32px 27px;border-radius:12px;border-color:#a6c5d21c;background:radial-gradient(ellipse at 68% 40%,#2a456650,transparent 65%),linear-gradient(120deg,#10243e,#122b46 70%,#0c2038);color:#e5e8dc;box-shadow:0 16px 35px #040f2017}
+.orbit-atmosphere{position:absolute;inset:0;z-index:-1;background:radial-gradient(ellipse at 88% 10%,#b5a2d610,transparent 42%),radial-gradient(ellipse at 12% 100%,#80bcb50c,transparent 50%);pointer-events:none;animation:orbit-atmosphere 23s ease-in-out infinite alternate}
+.orbit-head{color:#839fac;letter-spacing:1px;font-size:10px;padding-bottom:10px}
+.orbit-head .signal{color:#d1c6a3;font-size:11px;letter-spacing:2px}
+.orbit-head .signal:before{background:#d8c18d;box-shadow:0 0 12px #ecd59855}
+.companion-layout{grid-template-columns:.85fr 1.15fr;min-height:445px;gap:5px}
+.companion-copy{position:relative;z-index:2;pointer-events:none}
+.companion-kicker{font-size:9px;color:#8ba6b3;letter-spacing:2px}
+.companion-copy h2{font:400 clamp(28px,3vw,39px)/1.65 'STSong','SimSun',serif;letter-spacing:2px;color:#e9e5d5;margin:23px 0 21px}
+.companion-copy>p{font-size:11px;line-height:1.95;color:#8fa8b8;letter-spacing:1px}
+.orbit-chat-button{pointer-events:auto;display:flex;align-items:center;gap:30px;margin-top:29px;padding:12px 19px;border:1px solid #d8c79e6b;border-radius:5px;background:linear-gradient(120deg,#deceaa,#bfad85);color:#354451;box-shadow:0 4px 22px #ccba8c0c;font-size:12px}
+.orbit-chat-button:hover{box-shadow:0 4px 23px #cdbc9522;background:#e0d3b3}
+.orbit-chat-button span{font-size:16px}
+.orbit-stage{height:430px;min-width:0;isolation:isolate}
+#orbitParticles{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:-1}
+.companion-haze{position:absolute;width:74%;height:64%;border-radius:50%;background:radial-gradient(#b8d4d312,#829ad00e 40%,transparent 70%);filter:blur(7px);pointer-events:none;animation:companion-haze 7s ease-in-out infinite}
+#sprite{width:380px;height:380px;max-width:100%;padding:0;border:0;background:transparent;filter:drop-shadow(0 5px 16px #cddcce0d)}
+#sprite:focus-visible{outline:1px solid #d5c69e5c;outline-offset:-42px}
+.stage-caption{bottom:6px;color:#8da7b6;font-size:10px;letter-spacing:1px}
+.orbit-foot{gap:20px;align-items:center;border-top:1px solid #abc2c41b;padding-top:23px}
+.orbit-summary>.signal{color:#819dab;font-size:9px;letter-spacing:1px}
+.orbit-summary>.signal:before{display:none}
+.orbit-summary p{font-size:13px;color:#d4d9cc;letter-spacing:0;margin:9px 0 13px;line-height:1.8}
+.orbit-summary #seeDay{padding:0;background:transparent;border:0;border-radius:0;font-size:10px;color:#c8ba96}
+.orbit-stats{display:flex;gap:32px;flex:none;margin:0;padding:10px 0 10px 29px;border-left:1px solid #b1c7c523}
+.orbit-stats>div{min-width:45px}
+.orbit-stats dt{font-size:9px;letter-spacing:1px;color:#8ca7b3}
+.orbit-stats dd{font:32px/1.5 Georgia,serif;color:#e2d6b5;margin:5px 0 0}
+@keyframes orbit-atmosphere{to{translate:2% -1%;filter:hue-rotate(14deg)}}
+@keyframes companion-haze{50%{scale:1.08;opacity:.6}}
+.paused .orbit-atmosphere,.paused .companion-haze{animation-play-state:paused}
+@media(max-width:1000px){.orbit-panel{padding:26px}.companion-copy h2{font-size:30px}.companion-layout{grid-template-columns:.9fr 1.1fr}.orbit-stage{height:400px}#sprite{width:350px;height:350px}}
+@media(max-width:720px){
+ body[data-active-panel=orbit] .desk{margin-top:2px}
+ body[data-active-panel=orbit] .rail{padding-top:40px}
+ body[data-active-panel=orbit] .workarea{padding-bottom:10px}
+ .orbit-panel{padding:19px 16px 21px;border-radius:9px}
+ .orbit-head{font-size:8px;padding-bottom:0;gap:8px}.orbit-head .signal{font-size:9px;letter-spacing:1px}
+ .companion-layout{grid-template-columns:1fr;gap:0;min-height:0}
+ .companion-copy{padding-top:28px}
+ .companion-kicker{font-size:8px;letter-spacing:1px}
+ .companion-copy h2{font-size:27px;line-height:1.6;margin:13px 0 14px;letter-spacing:1px}
+ .companion-copy h2 br{display:initial}
+ .companion-copy>p{font-size:10px;line-height:1.8}
+ .companion-copy>p br{display:none}
+ .orbit-chat-button{font-size:11px;margin-top:18px;padding:10px 14px;gap:23px}
+ .orbit-stage{height:315px;margin-top:0;margin-inline:-13px;width:calc(100% + 26px)}
+ #sprite{width:310px;height:310px}
+ .stage-caption{bottom:10px;font-size:8px;letter-spacing:1px}
+ .orbit-foot{gap:20px;align-items:stretch;padding-top:20px;flex-direction:column}
+ .orbit-summary p{font-size:12px;margin-top:8px;margin-bottom:9px}
+ .orbit-stats{border-left:0;border-top:1px solid #b1c7c51c;padding:18px 0 0;gap:0}
+ .orbit-stats>div{flex:1}.orbit-stats>div+div{padding-left:24px;border-left:1px solid #b1c7c51c}
+ .orbit-stats dd{font-size:29px;margin-top:2px}
+ body[data-active-panel=orbit] .outside-footer{padding-bottom:30px}
+}
+@media(prefers-reduced-motion:reduce){.orbit-atmosphere,.companion-haze{animation:none!important}}
+main:focus{outline:none}

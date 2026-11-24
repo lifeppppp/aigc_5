@@ -117,6 +117,8 @@ function renderDayCards() {
 function updateOrbit() {
   const list = tasks[selected] || [];
   const open = list.filter(task => !task.done).length;
+  $('#orbitPending').textContent = String(open).padStart(2,'0');
+  $('#orbitDone').textContent = String(list.length-open).padStart(2,'0');
   $('#orbitDate').textContent = selected.replaceAll('-',' / ');
   $('#spriteMood').textContent = open?'陪你专注 · 还有 '+open+' 件待办':list.length?'今日计划已完成，休息一下吧。':'歇着，等你写下新的计划。';
 }

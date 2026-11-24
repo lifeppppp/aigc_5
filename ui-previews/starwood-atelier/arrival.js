@@ -8,6 +8,7 @@
   document.body.append(dialog);
   const sky = dialog.querySelector('.arrival-sky');
   const ctx = sky.getContext('2d');
+  const cosmos = window.StarwoodCosmos.create(sky,'arrival');
   const friendCanvas = dialog.querySelector('.arrival-friend canvas');
   const start = dialog.querySelector('.arrival-start');
   const friend = dialog.querySelector('.arrival-friend');
@@ -15,7 +16,6 @@
   const hint = dialog.querySelector('.arrival-hint');
   let state = 'closed';
   let phaseStart = 0;
-  let stars = [];
   let width = 0, height = 0;
   let timers = [];
   let frameId = 0;
@@ -34,16 +34,9 @@
   function resize() {
     width = innerWidth;
     height = innerHeight;
-    const ratio = Math.min(devicePixelRatio || 1,2);
-    sky.width = width*ratio;sky.height = height*ratio;
-    ctx.setTransform(ratio,0,0,ratio,0,0);
-    let seed = 818;
-    const random = () => {seed=seed*16807%2147483647;return seed/2147483647;};
-    stars = Array.from({length:Math.min(380,Math.round(width*height/3600))},()=>({
-      x:random()*width,y:random()*height,r:.25+random()*1.05,
-      phase:random()*6.28,depth:.3+random()*.7
-    }));
+    cosmos.resize();
   }
+
   function draw(time) {
     if(!dialog.open) return;
     if(time-lastFrame>32) {
@@ -51,13 +44,7 @@
       const still = reduced.matches;
       gaze.x += (pointer.x-gaze.x)*.035;
       gaze.y += (pointer.y-gaze.y)*.035;
-      ctx.clearRect(0,0,width,height);
-      for(const star of stars) {
-        const alpha = still ? .55 : .35 + .25*Math.sin(time*.00065+star.phase);
-        const x=star.x+gaze.x*star.depth*12,y=star.y+gaze.y*star.depth*8;
-        ctx.fillStyle='rgba(221,234,244,'+alpha+')';
-        ctx.beginPath();ctx.arc(x,y,star.r,0,Math.PI*2);ctx.fill();
-      }
+      cosmos.draw(time,{still,x:gaze.x,y:gaze.y});
       if(!still && (state==='forming'||state==='friend')) {
         const progress=Math.min((time-phaseStart)/1800,1);
         const cx=width*.5,cy=height*.47;
@@ -84,7 +71,7 @@
     document.body.classList.remove('arrival-open');
     try {localStorage.setItem(storageKey,'seen');}
     catch {window.setTimeout(()=>toast('此浏览器未能保存开场偏好，刷新时可能再次播放'),300);}
-    const focusTarget = returnFocus?.isConnected && returnFocus!==document.body ? returnFocus : document.querySelector('.brand');
+    const focusTarget = returnFocus?.isConnected && returnFocus!==document.body ? returnFocus : document.querySelector('main');
     focusTarget?.focus({preventScroll:true});
   }
   function enter() {
