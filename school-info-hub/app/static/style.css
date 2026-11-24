@@ -182,10 +182,11 @@ textarea.fldin { resize: vertical; }
 .win-name { font-size: 13px; font-weight: 700; color: #5c4326; }
 .win-url { font-size: 10px; color: #9b8261; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .shutter {
-  position: absolute; top: 24px; bottom: 0; width: 50%; z-index: 2;
+  position: absolute; top: 24px; bottom: 0; width: 50%; z-index: 2; opacity: .42;
   background: repeating-linear-gradient(90deg, #b98d5f 0 6px, #a97e50 6px 12px);
-  border: 2px solid #8a6d4a; transition: transform .55s cubic-bezier(.4, .1, .2, 1);
+  border: 2px solid #8a6d4a; transition: transform .55s cubic-bezier(.4, .1, .2, 1), opacity .4s;
 }
+.win.opening .shutter { opacity: .95; }
 .shutter.l { left: 0; transform-origin: left center; }
 .shutter.r { right: 0; transform-origin: right center; }
 .win.opening .shutter.l { transform: rotateY(-105deg); }
