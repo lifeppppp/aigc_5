@@ -32,6 +32,47 @@
     return texture;
   }
   const galaxy = createGalaxy(442);
+  // A tidal stream, sampled once so individual grains stay coherent as it drifts.
+  function streamY(u) {
+    return .62 - .36*u + .13*Math.sin(5.9*u-.8);
+  }
+  function makeStream() {
+    const sheet=document.createElement('canvas');
+    sheet.width=1440; sheet.height=480;
+    const ink=sheet.getContext('2d');
+    let seed=8273;
+    const random=()=>(seed=seed*16807%2147483647)/2147483647;
+    for(let i=0;i<23000;i++) {
+      const u=random(), strand=i%7;
+      const spread=(random()+random()+random()-1.5);
+      const swell=.35+.65*Math.pow(Math.sin(5*u+.3),2);
+      const seam=.035*Math.sin(11*u+strand*.43)+.018*Math.cos(16*u-strand*.37);
+      const y=streamY(u)+swell*(seam+spread*(i%4===0?.16:.033));
+      const light=.15+.62*random()*Math.sin(Math.PI*u);
+      ink.fillStyle=strand<4?'rgba(250,216,163,'+light+')':'rgba(165,207,241,'+light+')';
+      const r=.35+random()*.95;
+      ink.fillRect(u*sheet.width,y*sheet.height,r*1.55,r);
+    }
+    return sheet;
+  }
+  const stream=makeStream();
+  function drawStream(ctx,w,h,t,companion) {
+    const span=w*1.24, depth=Math.min(h*.82,span*.63);
+    const left=-w*.12+w*.024*Math.sin(t/9100);
+    const top=h*(companion?.59:.70)-depth*.50+h*.018*Math.sin(t/6800);
+    ctx.save();
+    ctx.globalCompositeOperation='screen';
+    ctx.drawImage(stream,left,top,span,depth);
+    for(let i=0;i<9;i++) {
+      const u=(i*.127+t*(.000014+i*.0000006))%1;
+      const x=left+u*span, y=top+depth*(streamY(u)+.017*Math.sin(i+u*11));
+      const radius=2.3+(i%3)*1.6;
+      const glow=ctx.createRadialGradient(x,y,0,x,y,radius);
+      glow.addColorStop(0,'#fff5cf');glow.addColorStop(.20,'#eac88ba0');glow.addColorStop(1,'#d2ca9900');
+      ctx.fillStyle=glow;ctx.fillRect(x-radius,y-radius,radius*2,radius*2);
+    }
+    ctx.restore();
+  }
   function create(canvas, variant) {
     const ctx=canvas.getContext('2d');
     let width=0,height=0,stars=[],dust=[],sparks=[];
@@ -97,6 +138,7 @@
 
         orbit(width*.86,height*.73,width*.36,height*.17,-.5,t,'rgba(200,199,172,.10)');
       }
+      drawStream(ctx,width,height,t,companion);
       for(const star of stars) {
         const alpha = still ? .5 : .23 + .3*Math.sin(t*.0007+star.phase);
         const drift=t*.005*star.depth;
