@@ -116,6 +116,7 @@
       }
     }
   }
+  window.StarwoodMascot = {draw};
   function frame(time) {
     if(time-previousTime>38 && !document.hidden){
       if(time>nextBlink){blinkStart=time;nextBlink=time+3600+Math.random()*2600;}
