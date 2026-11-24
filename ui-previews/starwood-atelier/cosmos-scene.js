@@ -72,19 +72,6 @@
       ctx.fillStyle=glow;ctx.fillRect(x-8,y-8,16,16);
       ctx.restore();
     }
-    function planet() {
-      const radius=Math.min(width,height)*.045+13;
-      const x=width*.075,y=height*.80;
-      ctx.save();ctx.translate(x,y);ctx.rotate(-.5);
-      ctx.strokeStyle='rgba(204,190,160,.16)';ctx.lineWidth=2;
-      ctx.beginPath();ctx.ellipse(0,0,radius*2.25,radius*.53,0,0,Math.PI*2);ctx.stroke();
-      const shade=ctx.createRadialGradient(-radius*.45,-radius*.55,0,0,0,radius*1.3);
-      shade.addColorStop(0,'#718397');shade.addColorStop(.3,'#3e526b');shade.addColorStop(.76,'#13273e');shade.addColorStop(1,'#09172c');
-      ctx.beginPath();ctx.arc(0,0,radius,0,Math.PI*2);ctx.fillStyle=shade;ctx.fill();
-      ctx.strokeStyle='rgba(207,194,162,.32)';ctx.lineWidth=1;
-      ctx.beginPath();ctx.ellipse(0,0,radius*2.25,radius*.53,0,0,Math.PI);ctx.stroke();
-      ctx.restore();
-    }
     function burst(x,y,small=false) {
       const birth=performance.now();
       for(let i=0;i<(small?2:16);i++) {
@@ -107,12 +94,14 @@
       } else {
         galaxyAt(width*.87,height*.22,Math.max(340,Math.min(width*.68,850)),-.38+t*.000006,.47,.8);
         galaxyAt(width*.12,height*.72,Math.min(width*.48,480),.65-t*.000009,.66,.38);
-        planet();
+
         orbit(width*.86,height*.73,width*.36,height*.17,-.5,t,'rgba(200,199,172,.10)');
       }
       for(const star of stars) {
         const alpha = still ? .5 : .23 + .3*Math.sin(t*.0007+star.phase);
-        const x=star.x+(options.x||0)*star.depth*12,y=star.y+(options.y||0)*star.depth*8;
+        const drift=t*.005*star.depth;
+        const x=((star.x+drift+(options.x||0)*star.depth*12)%width+width)%width;
+        const y=((star.y-drift*.27+(options.y||0)*star.depth*8)%height+height)%height;
         ctx.fillStyle='rgba(216,231,244,'+Math.max(.08,alpha)+')';
         ctx.beginPath();ctx.arc(x,y,star.r,0,Math.PI*2);ctx.fill();
         if(star.r>1.15) {
