@@ -1,0 +1,13 @@
+server:
+  host: 0.0.0.0
+  port: 8010
+  access_token: ''
+bailian:
+  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  api_key: ''
+  model: qwen-plus
+  enable_search: true
+dingtalk:
+  enabled: false
+  app_key: ''
+  app_secret: ''
