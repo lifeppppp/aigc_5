@@ -23,7 +23,7 @@ CHAT_SYSTEM = (
 @app.middleware('http')
 async def auth(request: Request, call_next):
     tok = (config.get().get('server') or {}).get('access_token')
-    if tok and request.url.path.startswith('/api'):
+    if tok and request.url.path.startswith('/api') and not request.url.path.startswith('/api/starwood'):
         if request.headers.get('x-token') != tok and request.query_params.get('token') != tok:
             return JSONResponse({'error': 'unauthorized'}, status_code=401)
     return await call_next(request)
@@ -179,5 +179,8 @@ def download(doc_id: int, fmt: str = 'md'):
              if ext == 'docx' else 'text/markdown; charset=utf-8')
     return FileResponse(path, media_type=media, filename=f'{doc["title"]}.{ext}')
 
+
+from .starwood_api import install as install_starwood
+install_starwood(app)
 
 app.mount('/', StaticFiles(directory=Path(__file__).resolve().parent / 'static', html=True), name='static')
