@@ -35,17 +35,33 @@
     card.querySelector('h3').textContent=name;card.querySelector('p').textContent=desc;
     card.dataset.provider=id;
     card.querySelector('button').onclick=async()=>{
-      if(endpoint) {
-        try {
-          const result=await request('/authorize',{provider:id});
-          const target=new URL(result.url);
-          if(target.protocol!=='https:')throw Error('授权链接需要 HTTPS');
-          location.assign(target.href);
-        } catch(e){notice.textContent=e.message}
-      } else if(url) {
-        window.open(url,'_blank','noopener,noreferrer');
-        notice.textContent='已打开'+name+'官方入口。账号授权回调服务尚未配置，连接状态需由服务端验证。';
-      } else notice.textContent='请在微信搜索“杭电学生”。自动跳转需要团队配置该小程序的正式入口和授权接口。';
+      const dialog=document.createElement('dialog');
+      dialog.className='connection-dialog';
+      const heading=document.createElement('h2');heading.textContent='连接'+name;
+      const message=document.createElement('p');message.setAttribute('role','status');
+      message.textContent=endpoint?'正在检查授权入口……':'账号授权服务尚未接入。';
+      const link=document.createElement('a');link.textContent='打开'+name+'官方登录入口 ↗';
+      link.target='_blank';link.rel='noopener noreferrer';
+      if(url)link.href=url;
+      link.hidden=true;
+      const close=document.createElement('button');close.type='button';close.textContent='返回连接页';
+      close.onclick=()=>dialog.close();
+      dialog.append(heading,message,link,close);document.body.append(dialog);
+      dialog.addEventListener('close',()=>dialog.remove(),{once:true});
+      dialog.showModal();
+      function unavailable(reason) {
+        message.textContent=reason+'。'+(url?'你可以前往官方入口登录。登录完成后，本应用仍需平台授权接口才能读取消息和文件。':'请在微信搜索“杭电学生”。自动跳转与账号授权需要该小程序的正式入口。');
+        link.hidden=!url;
+        card.querySelector('small').textContent='授权待接入';
+        notice.textContent=name+'的账号授权接口尚未接入。';
+      }
+      if(!endpoint){unavailable('账号授权服务尚未接入');return}
+      try {
+        const result=await request('/authorize',{provider:id});
+        const target=new URL(result.url);
+        if(target.protocol!=='https:')throw Error('授权链接需要 HTTPS');
+        if(dialog.open)location.assign(target.href);
+      } catch(error){if(dialog.open)unavailable(error.message)}
     };
     cards.append(card);
   });
