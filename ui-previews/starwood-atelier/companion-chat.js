@@ -15,7 +15,7 @@
   let focusedTask = null;
   let requestVersion = 0;
   let returnFocus;
-  dialog.querySelector('#chatMode').textContent = endpoint ? '在线接口' : '本地演示 · 百炼待接入';
+  dialog.querySelector('#chatMode').textContent = endpoint ? '百炼在线 · 学习辅助' : '本地演示 · 百炼待接入';
   function message(role, text) {
     const row = document.createElement('div');
     row.className = 'chat-message '+role;
@@ -73,7 +73,7 @@
     try {
       let reply;
       if (endpoint) {
-        timeout = setTimeout(() => controller.abort(),45000);
+        timeout = setTimeout(() => controller.abort(),80000);
         const response = await fetch(endpoint,{
           method:'POST',headers:{'Content-Type':'application/json'},
           credentials:'same-origin',signal:controller.signal,
