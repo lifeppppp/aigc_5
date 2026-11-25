@@ -1,0 +1,41 @@
+/* 与 sentinel.js 一起放进星木目录（服务器上是 /opt/school-info-hub/app/starwood/，8010 同源托管），
+   sentinel.js 会按自身 src 自动插一个 <link>，不需要手工改 style.css。
+   所有选择器都带 #intelPanel 前缀，不会和 Hank 版样式打架。 */
+#intelPanel{padding:14px 0}
+#intelPanel[hidden]{display:none}
+#intelPanel .intel-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+#intelPanel .intel-head h2{font:27px "SimSun",serif;margin:6px 0 0;color:#303d3b}
+#intelPanel .intel-tools{display:flex;align-items:center;gap:12px}
+#intelPanel .intel-state{font-size:10px;color:#9d8c70;letter-spacing:1px}
+#intelPanel .intel-btn{border:0;border-radius:4px;background:#486755;color:#f6f0df;padding:10px 16px;font-size:11px}
+#intelPanel .intel-btn.small{padding:7px 12px;font-size:10px;flex:none}
+#intelPanel .intel-btn.ghost{background:none;border:1px dashed #7d8b7c;color:#41524e;width:100%;margin-top:4px}
+#intelPanel .intel-warn{background:#3a2a20;border:1px solid #a8703f55;border-radius:6px;padding:12px 16px;margin:16px 0;font-size:11px;color:#e3c9a8;line-height:1.9}
+#intelPanel .intel-id{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px;font-size:10px;color:#9d8c70;letter-spacing:.5px}
+#intelPanel .intel-idtip{flex:1 1 260px;line-height:1.8}
+#intelPanel .intel-tokenrow{display:flex;gap:8px;flex:1 1 320px}
+#intelPanel .intel-token{flex:1;min-width:0;background:#fffdf7;border:1px solid #cbbfa4;border-radius:4px;color:#303d3b;padding:8px 10px;font-size:11px}
+#intelPanel .intel-who{color:#41524e;border:1px solid #d8cdb4;background:#fffdf7;border-radius:20px;padding:4px 12px}
+#intelPanel .intel-quota{color:#9d8c70}
+#intelPanel .intel-quota.bad{color:#f0c9a0;border-color:#a8703f;background:#3a2a20;border:1px solid #a8703f55;border-radius:4px;padding:5px 10px}
+#intelPanel .intel-list{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+#intelPanel .intel-item{background:var(--paper);color:var(--ink);border-radius:4px;padding:20px 22px;box-shadow:0 8px 20px #0005;border-left:3px solid #cfc7b2}
+#intelPanel .intel-item.important{border-left-color:#b8763f}
+#intelPanel .intel-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+#intelPanel .intel-label{font:15px Georgia,"SimSun",serif;letter-spacing:1px}
+#intelPanel .intel-time{font-size:10px;color:var(--muted)}
+#intelPanel .intel-flag{font-size:9px;color:#8a4f28;background:#e9d3bd;border-radius:20px;padding:3px 9px}
+#intelPanel .intel-summary{font-size:12px;line-height:1.9;color:#5c5546;margin:10px 0 0}
+#intelPanel .intel-todo{display:flex;align-items:flex-start;gap:14px;border-top:1px solid #ddd6c4;padding:13px 0 13px;margin-top:13px}
+#intelPanel .intel-todo-main{flex:1;min-width:0}
+#intelPanel .intel-todo strong{display:block;font-size:13px;line-height:1.6;word-break:break-word}
+#intelPanel .intel-todo-meta{display:block;font-size:10px;color:var(--green);margin-top:4px}
+#intelPanel .intel-todo-detail{font-size:11px;line-height:1.8;color:#8a8272;margin:7px 0 0;word-break:break-word;overflow-wrap:anywhere}
+#intelPanel .intel-link{display:inline-block;font-size:10px;color:#9a8a6f;margin-top:10px;text-decoration:none;border-bottom:1px dashed #b6a988}
+#intelPanel .intel-shotrow{display:flex;flex-direction:column;gap:9px;margin-top:12px}
+#intelPanel .intel-shots{display:flex;gap:9px;flex-wrap:wrap}
+#intelPanel .intel-shot{width:160px;height:auto;border:1px solid #cdc4ad;border-radius:3px;cursor:zoom-in;background:#efe8d8}
+#intelPanel .intel-warn-row+.intel-warn-row{margin-top:8px;border-top:1px dashed #7a5a3a;padding-top:8px}
+#intelPanel .intel-empty,#intelPanel .intel-foot{font-size:11px;line-height:1.9;color:#9a9582}
+#intelPanel .intel-foot{margin:20px 0 0;font-size:9px;color:#7d7663}
+@media(max-width:680px){#intelPanel .intel-head{align-items:flex-start}#intelPanel .intel-item{padding:16px 14px}#intelPanel .intel-todo{gap:9px}}
