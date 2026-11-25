@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#f2f4f8">
+<title>校园信息助手</title>
+<link rel="stylesheet" href="style.css?v=21">
+</head>
+<body>
+<div id="app">
+
+  <div id="bg"></div>
+  <div id="bg-tint"></div>
+
+  <!-- 主页：聊天 / 待办 -->
+  <main id="home">
+    <header id="topbar">
+      <button class="icon-btn" id="menu-btn" aria-label="打开侧边栏">☰</button>
+      <div class="title">校园信息助手</div>
+      <span class="badge" id="model-badge">…</span>
+      <button class="icon-btn" id="hist-btn" aria-label="历史对话">🕘</button>
+      <button class="icon-btn" id="new-conv" aria-label="新对话">＋</button>
+    </header>
+
+    <section id="chat-box"></section>
+
+    <section id="todo-pane" class="hidden">
+      <div class="todo-head">今日待办</div>
+      <div id="todo-list"></div>
+    </section>
+
+    <footer id="inputbar">
+      <div id="mode-pop" class="hidden">
+        <button class="mode-opt" data-mode="ai"><span class="mi">💬</span>AI 对话模式</button>
+        <button class="mode-opt" data-mode="todo"><span class="mi">☑</span>待办模式</button>
+      </div>
+      <button class="icon-btn plus" id="plus-btn" aria-label="切换模式">＋</button>
+      <input id="msg" placeholder="问点什么…" autocomplete="off">
+      <button class="icon-btn net" id="net-btn" title="联网搜索">🌐</button>
+      <button class="send" id="send">发送</button>
+    </footer>
+  </main>
+
+  <!-- 侧边栏 -->
+  <div id="scrim" class="hidden"></div>
+  <aside id="sidebar">
+    <button id="profile">
+      <span class="avatar">👤</span>
+      <span class="p-name" id="p-name">同学</span>
+      <span class="p-edit">点击修改 ›</span>
+    </button>
+    <nav id="side-nav">
+      <button class="side-item" data-page="settings"><span class="si">⚙</span>设置</button>
+      <button class="side-item" data-page="links"><span class="si">🪟</span>链接市场</button>
+      <button class="side-item" data-page="calendar"><span class="si">📅</span>个人日历</button>
+      <button class="side-item" data-page="dingtalk"><span class="si">📨</span>钉钉消息</button>
+      <button class="side-item" data-page="docs"><span class="si">📄</span>汇总文档</button>
+    </nav>
+    <div class="side-foot">AIGC 竞赛 · 第 5 组<br>右滑关闭侧边栏</div>
+  </aside>
+
+  <!-- 设置 -->
+  <section class="page" id="page-settings">
+    <header class="page-head"><button class="back">‹</button><b>设置</b></header>
+    <div class="page-body">
+      <div class="gtitle">冷暖色调</div>
+      <div class="group">
+        <div class="tone-row"><span>冷</span><input type="range" id="tone" min="-100" max="100" value="0"><span>暖</span></div>
+        <div class="sub" id="tone-label">中性</div>
+      </div>
+      <div class="gtitle">主题颜色</div>
+      <div class="group"><div class="swatches" id="swatches"></div></div>
+      <div class="gtitle">主页背景</div>
+      <div class="group">
+        <div class="bg-thumbs" id="bg-thumbs"></div>
+        <div class="row">
+          <button class="syncbtn" id="bg-upload-btn">上传自己的图片</button>
+          <button class="syncbtn" id="bg-reset">恢复默认</button>
+        </div>
+        <input type="file" id="bg-file" accept="image/*" class="hidden">
+        <div class="sub">上传的图片只保存在本机浏览器。</div>
+      </div>
+      <details class="group model-box">
+        <summary>模型接口（调试用）</summary>
+        <input id="set-base" class="fldin" placeholder="接口地址 base_url">
+        <input id="set-model" class="fldin" placeholder="模型名">
+        <input id="set-key" class="fldin" placeholder="API Key / 组内令牌">
+        <label class="ckline"><input type="checkbox" id="set-search">联网搜索</label>
+        <input id="set-token" class="fldin" placeholder="访问令牌（可留空）">
+        <div class="row"><button class="syncbtn" id="set-save">保存</button><span class="sub" id="set-result"></span></div>
+      </details>
+    </div>
+  </section>
+
+  <!-- 链接市场 -->
+  <section class="page" id="page-links">
+    <header class="page-head"><button class="back">‹</button><b>链接市场</b></header>
+    <div class="page-body">
+      <div class="sub link-tip">点一下小窗户，窗户打开后自动跳转到对应网站。</div>
+      <div class="win-grid" id="win-grid"></div>
+    </div>
+  </section>
+
+  <!-- 个人日历 -->
+  <section class="page" id="page-calendar">
+    <header class="page-head"><button class="back">‹</button><b>个人日历</b></header>
+    <div class="page-body">
+      <div class="monthbar">
+        <button class="navbtn" id="prevM">‹</button>
+        <b id="monthLabel"></b>
+        <button class="navbtn" id="nextM">›</button>
+      </div>
+      <div class="wk"><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span><span>日</span></div>
+      <div class="grid" id="grid"></div>
+      <div class="sub cal-tip">点日期添加事项 · 左滑事项可删除 · ↻ 表示每周重复</div>
+    </div>
+  </section>
+
+  <!-- 钉钉消息 -->
+  <section class="page" id="page-dingtalk">
+    <header class="page-head"><button class="back">‹</button><b>钉钉消息</b></header>
+    <div class="page-body">
+      <div class="group"><div class="sub" id="dt-status"></div></div>
+      <div class="gtitle">手动导入群消息</div>
+      <div class="group">
+        <input id="imp-group" class="fldin" placeholder="群名称，如：学生会">
+        <textarea id="imp-text" class="fldin" rows="4" placeholder="每行一条消息，粘贴后导入"></textarea>
+        <div class="row"><button class="syncbtn" id="imp-btn">导入</button><span class="sub" id="imp-result"></span></div>
+      </div>
+      <div class="gtitle">消息列表</div>
+      <div class="group">
+        <div class="row"><select id="msg-group" class="fldin"></select><button class="syncbtn" id="msg-refresh">刷新</button></div>
+        <div class="msg-list" id="msg-list"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 汇总文档 -->
+  <section class="page" id="page-docs">
+    <header class="page-head"><button class="back">‹</button><b>汇总文档</b></header>
+    <div class="page-body">
+      <div class="group">
+        <div class="row"><select id="sum-group" class="fldin"></select><input id="sum-hours" class="fldin hrs" type="number" placeholder="小时数(可空)"></div>
+        <div class="row"><button class="syncbtn" id="sum-btn">生成汇总</button><span class="sub" id="sum-result"></span></div>
+      </div>
+      <div class="gtitle">已生成文档</div>
+      <div class="group"><div class="msg-list" id="doc-list"></div></div>
+    </div>
+  </section>
+
+  <!-- 历史对话 -->
+  <section class="page" id="page-hist">
+    <header class="page-head"><button class="back">‹</button><b>历史对话</b></header>
+    <div class="page-body"><div class="msg-list" id="convs"></div></div>
+  </section>
+
+  <!-- 改名弹层 -->
+  <div class="modal hidden" id="rename-modal">
+    <div class="modal-card">
+      <h3>修改名称</h3>
+      <input id="rename-input" class="fldin" maxlength="20" placeholder="输入你的名称">
+      <div class="row"><button class="syncbtn" id="rename-cancel">取消</button><button class="syncbtn solid" id="rename-save">保存</button></div>
+    </div>
+  </div>
+
+  <!-- 日历某日弹层 -->
+  <div class="modal hidden" id="day-modal">
+    <div class="modal-card day-card">
+      <h3 id="day-title"></h3>
+      <div class="day-list" id="day-list"></div>
+      <div class="day-input">
+        <input id="day-text" class="fldin" placeholder="输入事项，回车添加">
+        <label class="ckline"><input type="checkbox" id="day-weekly">每周重复</label>
+        <button class="syncbtn solid" id="day-add">添加</button>
+      </div>
+      <div class="row"><button class="syncbtn" id="day-close">关闭</button></div>
+    </div>
+  </div>
+
+  <canvas id="fx"></canvas>
+  <div id="toast"></div>
+</div>
+<script src="app.js?v=20"></script>
+</body>
+</html>
