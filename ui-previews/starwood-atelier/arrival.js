@@ -39,11 +39,13 @@
 
   function draw(time) {
     if(!dialog.open) return;
-    if(time-lastFrame>32) {
+    if(!document.hidden) {
+      const delta=Math.max(0,Math.min(64,time-lastFrame));
       lastFrame=time;
       const still = reduced.matches || document.body.classList.contains('paused');
-      gaze.x += (pointer.x-gaze.x)*.035;
-      gaze.y += (pointer.y-gaze.y)*.035;
+      const easing=1-Math.exp(-delta/280);
+      gaze.x += (pointer.x-gaze.x)*easing;
+      gaze.y += (pointer.y-gaze.y)*easing;
       cosmos.draw(time,{still,x:gaze.x,y:gaze.y});
       if(!still && (state==='forming'||state==='friend')) {
         const progress=Math.min((time-phaseStart)/1800,1);

@@ -145,12 +145,13 @@
   }
   window.StarwoodMascot = {draw};
   function frame(time) {
-    if(time-previousTime>38 && !document.hidden){
+    const elapsed=Math.max(0,Math.min(64,time-previousTime));
+    previousTime=time;
+    if(!document.hidden && !document.body.classList.contains("arrival-open")){
       if(time>nextBlink){blinkStart=time;nextBlink=time+3600+Math.random()*2600;}
-      draw(mini,time,true);
-      if(!document.querySelector('#orbitPanel').hidden) draw(large,time,false);
-      reaction*=.94;
-      previousTime=time;
+      if(!document.querySelector("#orbitPanel").hidden) draw(large,time,false);
+      else if(document.body.dataset.activePanel!=="sources") draw(mini,time,true);
+      reaction*=Math.exp(-elapsed/650);
     }
     requestAnimationFrame(frame);
   }

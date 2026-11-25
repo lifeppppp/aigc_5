@@ -206,7 +206,7 @@
   });
   new ResizeObserver(()=>{scene.resize();scene.draw(0,{still:true});}).observe(canvas);
   function animate(time) {
-    if(time-last>40 && !document.hidden && !panel.hidden && !reduced.matches && !document.body.classList.contains('paused') && !document.body.classList.contains('arrival-open')) {
+    if(!document.hidden && !panel.hidden && !reduced.matches && !document.body.classList.contains('paused') && !document.body.classList.contains('arrival-open')) {
       scene.draw(time);last=time;
     }
     requestAnimationFrame(animate);
