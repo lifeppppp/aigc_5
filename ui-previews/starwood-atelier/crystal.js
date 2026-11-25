@@ -8,7 +8,9 @@
   const mini = dock.querySelector('canvas');
   const bubble = dock.querySelector('.companion-bubble');
   const reduce = matchMedia('(prefers-reduced-motion: reduce)');
-  let pointer = {x:0, y:0};
+  let pointer = {x:0, y:0, active:false};
+  const poses = new WeakMap();
+  let tapStart = -5000;
   let reaction = 0;
   let bubbleTimer;
   let previousTime = 0;
@@ -22,13 +24,20 @@
     reaction = 1;
   }
   addEventListener('pointermove', event => {
-    pointer.x = (event.clientX / innerWidth - .5) * 2;
-    pointer.y = (event.clientY / innerHeight - .5) * 2;
+    pointer.x = event.clientX;
+    pointer.y = event.clientY;
+    pointer.active = true;
   }, {passive:true});
+  document.documentElement.addEventListener('pointerleave', () => { pointer.active=false; });
+  addEventListener('blur', () => { pointer.active=false; });
+  for(const target of [dock.querySelector('button'),document.querySelector('#sprite')]) {
+    target.addEventListener('pointerenter', () => { reaction=Math.max(reaction,.45); });
+    target.addEventListener('pointerdown', () => { tapStart=performance.now(); reaction=1; });
+  }
   dock.querySelector('button').onclick = () => window.StarwoodChat?.open();
   window.addEventListener('starwood:celebrate', () => speak('又完成了一件事。给认真努力的你一点星光。'));
   document.querySelectorAll('[data-panel]').forEach(button => button.addEventListener('click', () => {
-    const words = {calendar:'一起把今天安排得轻松一点。',notes:'想法不用一次写完，先记下一句。',orbit:'我叫烁。你的每一点进步，我都记得。'};
+    const words = {calendar:'一起把今天安排得轻松一点。',notes:'想法不用一次写完，先记下一句。',orbit:'我叫烁。你的每一点进步，我都记得。',sources:'把学习的来处，连在一起。',import:'把资料放进来，我们一起理出下一步。'};
     speak(words[button.dataset.panel]);
   }));
   document.querySelector('#grid').addEventListener('click', event => {
@@ -59,8 +68,23 @@
     ctx.clearRect(0,0,360,360);
     const moving = !reduce.matches && !document.body.classList.contains('paused');
     const phase = moving ? time * .0013 : 0;
-    const bob = moving ? Math.sin(phase)*5 - reaction*10 : 0;
-    const tilt = moving ? pointer.x*.035 + Math.sin(phase*.65)*.025 : 0;
+    let pose=poses.get(canvas);
+    if(!pose){pose={x:0,y:0,time};poses.set(canvas,pose);}
+    const rect=canvas.getBoundingClientRect();
+    const clamp=value=>Math.max(-1,Math.min(1,value));
+    const targetX=pointer.active?clamp((pointer.x-rect.left-rect.width/2)/Math.max(110,rect.width*.65)):0;
+    const targetY=pointer.active?clamp((pointer.y-rect.top-rect.height/2)/Math.max(110,rect.height*.65)):0;
+    const elapsed=Math.max(0,Math.min(64,time-pose.time));pose.time=time;
+    const follow=1-Math.exp(-elapsed/100);
+    pose.x+=((moving?targetX:0)-pose.x)*follow;
+    pose.y+=((moving?targetY:0)-pose.y)*follow;
+    const gaze=moving?pose:{x:0,y:0};
+    const age=time-tapStart;
+    const spring=moving&&age>=0&&age<1000 ? Math.sin(age*.022)*Math.exp(-age/260) : 0;
+    const bob=moving?Math.sin(phase)*5-reaction*5+gaze.y*9-spring*16:0;
+    const tilt=moving?gaze.x*.20+Math.sin(phase*.65)*.025+spring*.11:0;
+    const reach=gaze.x*17;
+
     // Soft contact shadow grounds the floating form.
     ctx.save();
     ctx.translate(181,284);
@@ -70,15 +94,18 @@
     shadow.addColorStop(1,'rgba(75,98,77,0)');
     ctx.fillStyle=shadow;ctx.fillRect(-100,-100,200,200);
     ctx.restore();
-    ctx.save();ctx.translate(180,180+bob);ctx.rotate(tilt);ctx.translate(-180,-180);
+    ctx.save();ctx.translate(180+reach,180+bob);ctx.rotate(tilt);ctx.scale(1+spring*.055,1-spring*.065);ctx.translate(-180,-180);
     // Two little leaf-like fins, brushed champagne on their upper edge.
+    ctx.save();ctx.translate(155,102);ctx.rotate(moving?gaze.x*.12+Math.sin(phase*2)*.05+spring*.24:0);ctx.translate(-155,-102);
     let fin=ctx.createLinearGradient(120,80,165,124);
     fin.addColorStop(0,'#fffbed');fin.addColorStop(.45,'#e8d9ac');fin.addColorStop(1,'#b8b7a2');
     ctx.fillStyle=fin;ctx.beginPath();ctx.moveTo(157,106);ctx.bezierCurveTo(118,103,121,67,128,57);ctx.bezierCurveTo(148,61,173,79,157,106);ctx.fill();
     ctx.strokeStyle='#fff9df';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(129,64);ctx.quadraticCurveTo(140,82,155,99);ctx.stroke();
+    ctx.restore();ctx.save();ctx.translate(199,98);ctx.rotate(moving?-gaze.x*.12-Math.sin(phase*2)*.05-spring*.24:0);ctx.translate(-199,-98);
     fin=ctx.createLinearGradient(196,75,241,112);fin.addColorStop(0,'#fffced');fin.addColorStop(.5,'#d5dfc5');fin.addColorStop(1,'#a3baa9');
     ctx.fillStyle=fin;ctx.beginPath();ctx.moveTo(195,98);ctx.bezierCurveTo(195,70,225,66,242,76);ctx.bezierCurveTo(237,94,221,111,195,98);ctx.fill();
     ctx.strokeStyle='#ffffe9';ctx.beginPath();ctx.moveTo(205,94);ctx.quadraticCurveTo(221,81,236,78);ctx.stroke();
+    ctx.restore();
     // Pearl body with cool reflected light and a warm softbox reflection.
     const body=ctx.createRadialGradient(149,123,8,194,173,117);
     body.addColorStop(0,'#fffffa');body.addColorStop(.3,'#fffdf3');body.addColorStop(.61,'#eceee3');body.addColorStop(.82,'#ced8d4');body.addColorStop(1,'#9faeb2');
@@ -97,13 +124,13 @@
     ctx.strokeStyle='rgba(174,155,110,.48)';ctx.lineWidth=.8;ctx.stroke();
     const blinkAge=time-blinkStart;
     const blink = moving && blinkAge>=0 && blinkAge<160 ? Math.max(.08,Math.abs(blinkAge-80)/80) : 1;
-    const gazeX=moving?pointer.x*4:0, gazeY=moving?pointer.y*2:0;
+    const gazeX=gaze.x*13, gazeY=gaze.y*9;
     ctx.fillStyle='#53625b';
     for(const x of [164,195]){
       ctx.beginPath();ctx.ellipse(x+gazeX,166+gazeY,3.3,5.2*blink,0,0,Math.PI*2);ctx.fill();
       if(blink>.7){ctx.fillStyle='#fffef4';ctx.beginPath();ctx.arc(x+gazeX-.6,164.7+gazeY,.8,0,Math.PI*2);ctx.fill();ctx.fillStyle='#53625b';}
     }
-    ctx.beginPath();ctx.moveTo(175+gazeX,184);ctx.quadraticCurveTo(180+gazeX,187+reaction*3,185+gazeX,183.8);
+    ctx.beginPath();ctx.moveTo(175+gazeX,184+gazeY*.7);ctx.quadraticCurveTo(180+gazeX,187+reaction*3+gazeY*.7,185+gazeX,183.8+gazeY*.7);
     ctx.strokeStyle='#9ca58e';ctx.lineWidth=1.2;ctx.lineCap='round';ctx.stroke();
     ctx.restore();
     // Brief, quiet star accents respond to completed tasks.
