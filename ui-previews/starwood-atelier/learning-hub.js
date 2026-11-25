@@ -25,7 +25,7 @@
   if(endpoint && endpoint.origin!==location.origin) throw Error('学习服务需要同源部署');
   async function request(path, body) {
     const response=await fetch(endpoint.href.replace(/\/$/,'')+path,{credentials:'same-origin',method:body?'POST':'GET',headers:body?{'Content-Type':'application/json'}:{},body:body?JSON.stringify(body):undefined,signal:AbortSignal.timeout(30000)});
-    if(!response.ok)throw Error('服务暂时不可用，请稍后重试');
+    if(!response.ok){const error=await response.json().catch(()=>({}));throw Error(error.detail||'服务暂时不可用，请稍后重试')}
     return response.json();
   }
   providers.forEach(([id,name,desc,url],index)=>{
@@ -80,8 +80,8 @@
   const results=document.querySelector('#fileResults');
   const save=document.querySelector('#saveImported');
   const drafts=[];
-  document.querySelector('#fileFormats').textContent=endpoint?'TXT · Markdown · CSV · PDF · DOCX · 图片':'TXT · Markdown · CSV，每个文件最多 2 MB';
-  if(endpoint)input.accept='.txt,.md,.csv,.pdf,.docx,.png,.jpg,.jpeg';
+  document.querySelector('#fileFormats').textContent=endpoint?'TXT · Markdown · CSV · PDF · DOCX，每个最多 10 MB':'TXT · Markdown · CSV，每个文件最多 2 MB';
+  if(endpoint)input.accept='.txt,.md,.csv,.pdf,.docx';
   document.querySelector('#importMode').textContent=endpoint?'文件将交由已配置的学习服务识别，请先核对结果。':'本地提取模式 · 从文本中匹配日期和任务关键词，AI 识别服务待接入。日期未明确的事项，请手动补全。';
   for(const event of ['dragenter','dragover'])portal.addEventListener(event,e=>{e.preventDefault();portal.classList.add('receiving')});
   portal.addEventListener('dragleave',()=>portal.classList.remove('receiving'));
@@ -108,9 +108,9 @@
         try {
           let items;
           if(endpoint) {
-            const body=new FormData();body.append('file',file);
-            const response=await fetch(endpoint.href.replace(/\/$/,'')+'/extract',{method:'POST',body,credentials:'same-origin',signal:AbortSignal.timeout(90000)});
-            if(!response.ok)throw Error('文件识别服务请求失败');
+            
+            const response=await fetch(endpoint.href.replace(/\/$/,'')+'/extract?filename='+encodeURIComponent(file.name),{method:'POST',headers:{'Content-Type':'application/octet-stream'},body:file,credentials:'same-origin',signal:AbortSignal.timeout(90000)});
+            if(!response.ok){const error=await response.json().catch(()=>({}));throw Error(error.detail||'文件识别服务请求失败')}
             items=(await response.json()).items;
             if(!Array.isArray(items))throw Error('识别结果格式有误');
           } else {
@@ -141,7 +141,7 @@
       const date=draft.date.value,title=draft.title.value.trim();
       next[date]??=[];
       if(!next[date].some(t=>t.title===title&&t.source===draft.source)){
-        next[date].push({id:crypto.randomUUID(),title,details:draft.details.value,source:draft.source,type:'学习',done:false});count++;
+        next[date].push({id:crypto.randomUUID ? crypto.randomUUID() : "import-"+Date.now()+"-"+Math.random().toString(36).slice(2),title,details:draft.details.value,source:draft.source,type:'学习',done:false});count++;
       }
     }
     try{localStorage.setItem('starwood.tasks.v1',JSON.stringify(next))}catch{return status.textContent='保存失败，浏览器存储空间不足，请导出计划后再试'}

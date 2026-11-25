@@ -57,3 +57,19 @@ cosmos-scene.js 负责开场与星伴共用的宇宙绘制，纹理在本地生�
 - 平台接口需要逐个确认。浏览器打开官方登录页无法将第三方登录状态自动共享给本应用，服务部署不代表已有读取群聊权限。
 - 自动同步的日历结果还需要接入团队统一日历存储接口。当前日历仅保存于用户浏览器。
 本地文本导入无需服务，支持 TXT、Markdown、CSV，以日期/任务关键词提取候选事项，可编辑、核对后存入日历，并按标题和来源去重。UTF-8 与 GB18030 文本可读，文件最大 2 MB，每次最多 10 个。此模式有明确标记，未使用 AI。
+
+## 服务器部署与百炼接入（2026-11-25）
+
+服务器主页为 http://8.136.148.250:8010/，跳转 /starwood/。旧页面位于 /legacy/。
+服务器现有 app.config 和 app.bailian.complete 提供模型设置与请求，密钥继续存放服务器配置文件。
+server/starwood.py 应部署为 school-info-hub/app/starwood_api.py，前端文件部署至同级 starwood/。
+在 app/main.py 原有根静态目录挂载之前增加：
+from .starwood_api import install as install_starwood
+install_starwood(app)
+
+依赖增加 pypdf（部署验证版本 7.1.1），DOCX 复用已有 python-docx。
+/starwood/ 下自动选择 /api/starwood/chat 和 /api/starwood/learning；GitHub Pages 保留本地演示模式。
+后端提供真正百炼问答和 TXT/MD/CSV/DOCX/文字型 PDF 的任务提取，日期和任务需经用户核对。
+扫描 PDF/图片尚未接入 OCR。平台授权与分钟采集尚未接入。日历仍保存当前浏览器，不跨设备同步。
+接口复用现有应用的 /api 访问控制；后续启用 access_token 时，前端也需接入对应登录凭证。
+部署备份位于 /opt/school-info-hub-backups/starwood-20261125-113716。

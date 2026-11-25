@@ -1,3 +1,4 @@
-// 接入时填写团队自己的后端问答地址。密钥由后端保存。
-// 留空使用明确标注的本地演示回复。
-window.STARWOOD_CHAT = { endpoint: '' };
+// Server deployments expose only same-origin URLs; credentials stay on the server.
+const starwoodServer = location.pathname.startsWith('/starwood/');
+window.STARWOOD_CHAT = { endpoint: starwoodServer ? '/api/starwood/chat' : '' };
+window.STARWOOD_LEARNING = { endpoint: starwoodServer ? '/api/starwood/learning' : '' };
