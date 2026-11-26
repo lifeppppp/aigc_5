@@ -128,8 +128,14 @@
     if (!bar) return;
     bar.replaceChildren();
     if (!info) {
-      bar.append(el('span', 'intel-idtip',
-        '第一次用：把管理员发给你本人的令牌粘进来。之后这里只显示你自己的作业和成绩，组员之间互不可见。'));
+      /* 用户端：有账号的人走登录页，令牌由账号换出来，不用手抄 */
+      if (location.pathname.startsWith('/starwood/')) {
+        const go = el('a', 'intel-btn small', '登录 / 注册');
+        go.href = 'login.html';
+        bar.append(el('span', 'intel-idtip', '用你自己的账号登录，情报、授权、日历就都是你一个人的。'), go);
+      }
+      const tip = el('span', 'intel-idtip',
+        '或者把管理员发给你本人的令牌粘进来（开发者方式）。之后这里只显示你自己的作业和成绩，组员之间互不可见。');
       const inp = el('input', 'intel-token');
       inp.type = 'password';
       inp.placeholder = '你的专属令牌';
@@ -145,10 +151,11 @@
       inp.onkeydown = e => { if (e.key === 'Enter') save.click(); };
       const row = el('div', 'intel-tokenrow');
       row.append(inp, save);
-      bar.append(row);
+      bar.append(tip, row);
       return;
     }
     bar.append(el('span', 'intel-who', `身份 ${info.label || info.member}`));
+    if (info.username) bar.append(el('span', 'intel-acct', `账号 ${info.username}`));
     const st = info.stats || {};
     const used = (st.usage || {}).tokens || 0;
     const cap = st.member_cap || 0;
@@ -160,9 +167,14 @@
     if (st.cap && total >= st.cap) {
       bar.append(el('span', 'intel-quota bad', `全站预算已熔断（${total}/${st.cap}），需要充值`));
     }
-    const clear = el('button', 'intel-btn small', '清除本机令牌');
+    const clear = el('button', 'intel-btn small', '退出登录');
     clear.type = 'button';
-    clear.onclick = () => { localStorage.removeItem(TK); setIdent(null); load(true); };
+    clear.onclick = () => {
+      localStorage.removeItem(TK);
+      localStorage.removeItem('sentinel_account');
+      setIdent(null);
+      load(true);
+    };
     bar.append(clear);
   }
 
@@ -322,7 +334,7 @@
     if (!tag || document.querySelector('link[data-intel-style]')) return;
     const link = el('link');
     link.rel = 'stylesheet';
-    link.href = tag.src.replace(/sentinel\.js(\?.*)?$/, 'intel-panel.css');
+    link.href = tag.src.replace(/sentinel\.js(\?.*)?$/, 'intel-panel.css$1');
     link.dataset.intelStyle = '1';
     document.head.append(link);
   }
@@ -331,6 +343,13 @@
     mountStyles();
     buildPanel();
     bindRail();
+    if (location.hash === '#intel') {
+      const btn = document.querySelector('[data-panel="intel"]');
+      if (btn) {
+        btn.click();
+        history.replaceState(null, '', location.pathname + location.search);
+      }
+    }
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start);

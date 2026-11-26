@@ -16,6 +16,8 @@
 #intelPanel .intel-tokenrow{display:flex;gap:8px;flex:1 1 320px}
 #intelPanel .intel-token{flex:1;min-width:0;background:#fffdf7;border:1px solid #cbbfa4;border-radius:4px;color:#303d3b;padding:8px 10px;font-size:11px}
 #intelPanel .intel-who{color:#41524e;border:1px solid #d8cdb4;background:#fffdf7;border-radius:20px;padding:4px 12px}
+#intelPanel .intel-acct{color:#486755;border:1px solid #48675555;border-radius:20px;padding:4px 12px}
+#intelPanel a.intel-btn{display:inline-block;text-decoration:none;line-height:1.2;flex:none}
 #intelPanel .intel-quota{color:#9d8c70}
 #intelPanel .intel-quota.bad{color:#f0c9a0;border-color:#a8703f;background:#3a2a20;border:1px solid #a8703f55;border-radius:4px;padding:5px 10px}
 #intelPanel .intel-list{display:flex;flex-direction:column;gap:14px;margin-top:16px}
