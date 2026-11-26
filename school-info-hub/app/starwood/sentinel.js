@@ -10,18 +10,23 @@
   const TK = 'sentinel_token';
   const TS = 'sentinel_login_ts';
   const SESSION_MS = 30 * 86400000;
-  /* 一次登录 30 天有效：起点是登录那一刻，中途常用不续期。
-     时间戳缺失（老版本登录留下的令牌）也当过期，逼一次重新登录 */
+  /* 登录页也带版本号：旧版 login.html 不写 sentinel_login_ts，
+     被缓存住就会让人一登录就被判成未登录 */
+  const LOGIN = 'login.html?v=6';
+  /* 一次登录 30 天有效，起点是登录那一刻，中途常用不续期 */
   function clearLocal() {
     localStorage.removeItem(TK);
     localStorage.removeItem(TS);
     localStorage.removeItem('sentinel_account');
   }
+  function stamp() { localStorage.setItem(TS, String(Date.now())); }
   function token() {
     const t = localStorage.getItem(TK) || '';
     if (!t) return '';
     const born = Number(localStorage.getItem(TS) || 0);
-    if (!born || Date.now() - born > SESSION_MS) { clearLocal(); return ''; }
+    /* 时间戳缺失＝年龄未知（老登录页或缓存的登录页写下的令牌），不能直接踢人：
+       保持有效，由 needsLogin 的 401 判定，判过再补起点 */
+    if (born && Date.now() - born > SESSION_MS) { clearLocal(); return ''; }
     return t;
   }
   const TYPES = ['作业', '考试', '学习', '计划'];
@@ -146,7 +151,7 @@
       /* 用户端：有账号的人走登录页，令牌由账号换出来，不用手抄 */
       if (location.pathname.startsWith('/starwood/')) {
         const go = el('a', 'intel-btn small', '登录 / 注册');
-        go.href = 'login.html';
+        go.href = LOGIN;
         bar.append(el('span', 'intel-idtip', '用你自己的账号登录，情报、授权、日历就都是你一个人的。'), go);
       }
       const tip = el('span', 'intel-idtip',
@@ -161,7 +166,7 @@
         const v = inp.value.trim();
         if (!v) { setState('令牌是空的'); return; }
         localStorage.setItem(TK, v);
-        localStorage.setItem(TS, String(Date.now()));
+        stamp();
         load(true);
       };
       inp.onkeydown = e => { if (e.key === 'Enter') save.click(); };
@@ -363,7 +368,7 @@
     const go = el('button', 'intel-hook', '云端授权 · 确认登录并开启扫描 ↗');
     go.type = 'button';
     go.onclick = () => {
-      if (!token()) { location.href = 'login.html'; return; }
+      if (!token()) { location.href = LOGIN; return; }
       window.open(`${API}/grant#t=${encodeURIComponent(token())}&site=chaoxing`, '_blank');
     };
     box.append(go);
@@ -374,7 +379,7 @@
      免得情报服务一抖，全组连日历都打不开。 */
   function toLogin() {
     const next = encodeURIComponent(location.pathname + location.search + location.hash);
-    location.replace('login.html?next=' + next);
+    location.replace(LOGIN + '&next=' + next);
   }
 
   function needsLogin() {
@@ -382,9 +387,8 @@
     if (!token()) { toLogin(); return true; }
     fetch(API + '/api/health', { headers: { 'X-Client-Token': token() } })
       .then(r => {
-        if (r.status !== 401) return;
-        clearLocal();
-        toLogin();
+        if (r.status === 401) { clearLocal(); toLogin(); return; }
+        stamp();
       })
       .catch(() => { /* 连不上不算没登录 */ });
     return false;
