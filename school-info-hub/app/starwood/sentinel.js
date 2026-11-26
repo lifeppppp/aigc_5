@@ -8,7 +8,22 @@
   /* 每人一把专属令牌，键与 8000 群情报的 gi_token 分开：
      回落到 gi_token 会让所有人都以管理员身份看到别人的成绩，隔离就白做了 */
   const TK = 'sentinel_token';
-  const token = () => localStorage.getItem(TK) || '';
+  const TS = 'sentinel_login_ts';
+  const SESSION_MS = 30 * 86400000;
+  /* 一次登录 30 天有效：起点是登录那一刻，中途常用不续期。
+     时间戳缺失（老版本登录留下的令牌）也当过期，逼一次重新登录 */
+  function clearLocal() {
+    localStorage.removeItem(TK);
+    localStorage.removeItem(TS);
+    localStorage.removeItem('sentinel_account');
+  }
+  function token() {
+    const t = localStorage.getItem(TK) || '';
+    if (!t) return '';
+    const born = Number(localStorage.getItem(TS) || 0);
+    if (!born || Date.now() - born > SESSION_MS) { clearLocal(); return ''; }
+    return t;
+  }
   const TYPES = ['作业', '考试', '学习', '计划'];
   const $ = s => document.querySelector(s);
   let loaded = false;
@@ -146,6 +161,7 @@
         const v = inp.value.trim();
         if (!v) { setState('令牌是空的'); return; }
         localStorage.setItem(TK, v);
+        localStorage.setItem(TS, String(Date.now()));
         load(true);
       };
       inp.onkeydown = e => { if (e.key === 'Enter') save.click(); };
@@ -170,8 +186,7 @@
     const clear = el('button', 'intel-btn small', '退出登录');
     clear.type = 'button';
     clear.onclick = () => {
-      localStorage.removeItem(TK);
-      localStorage.removeItem('sentinel_account');
+      clearLocal();
       setIdent(null);
       load(true);
     };
@@ -357,19 +372,45 @@
   /* 进门闸：打开星木就得先有账号令牌，没有就去登录页，登录完回到原来那一页。
      令牌已存在但被 8020 判成无效也照样送回；服务连不上（网络抖、8020 重启中）不拦人，
      免得情报服务一抖，全组连日历都打不开。 */
+  function toLogin() {
+    const next = encodeURIComponent(location.pathname + location.search + location.hash);
+    location.replace('login.html?next=' + next);
+  }
+
   function needsLogin() {
     if (!/^\/starwood\//.test(location.pathname)) return false;
-    const next = encodeURIComponent(location.pathname + location.search + location.hash);
-    if (!token()) { location.replace('login.html?next=' + next); return true; }
+    if (!token()) { toLogin(); return true; }
     fetch(API + '/api/health', { headers: { 'X-Client-Token': token() } })
       .then(r => {
         if (r.status !== 401) return;
-        localStorage.removeItem(TK);
-        localStorage.removeItem('sentinel_account');
-        location.replace('login.html?next=' + next);
+        clearLocal();
+        toLogin();
       })
       .catch(() => { /* 连不上不算没登录 */ });
     return false;
+  }
+
+  /* 功能闸：智能体对话与「连接」页的动作都要有会话才能用。
+     进门闸已经拦掉未登录访问，这里补的是会话中途失效那一路：30 天到期、
+     或在另一个页签点了退出登录，而这一页还开着。捕获阶段先拦，
+     有会话时一行都不碰，companion-chat.js / learning-hub.js 的原有行为不变。 */
+  const LOCKED = '#openOrbitChat,#sprite,.chat-send,#tokenShortcut,#campusTokenBind,'
+    + '#checkConnections,.provider-card button';
+
+  function guardFeatures() {
+    document.addEventListener('click', e => {
+      if (token()) return;
+      const hit = e.target.closest && e.target.closest(LOCKED);
+      if (!hit) return;
+      e.preventDefault();
+      e.stopPropagation();
+      toLogin();
+    }, true);
+    document.addEventListener('submit', e => {
+      if (token() || !e.target.closest('.chat-dialog')) return;
+      e.preventDefault();
+      toLogin();
+    }, true);
   }
 
   function start() {
@@ -378,6 +419,7 @@
     buildPanel();
     bindRail();
     bridgeChaoxing();
+    guardFeatures();
     if (location.hash === '#intel') {
       const btn = document.querySelector('[data-panel="intel"]');
       if (btn) {

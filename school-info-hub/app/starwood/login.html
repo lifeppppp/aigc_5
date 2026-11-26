@@ -119,6 +119,7 @@
 
   function done(info) {
     localStorage.setItem('sentinel_token', info.token);
+    localStorage.setItem('sentinel_login_ts', String(Date.now()));
     localStorage.setItem('sentinel_account', JSON.stringify({
       username: info.username, member: info.member, label: info.label
     }));
