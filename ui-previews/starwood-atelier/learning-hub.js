@@ -15,7 +15,7 @@
     work.insertBefore(panel,work.querySelector('.desk-footer'));
     return panel;
   };
-  section('sources', '<div class="hub-heading"><span class="eyebrow">让消息，循着星轨而来</span><h2>把学习的来处，连在一起。</h2><p>由烁整理新消息与资料，把值得记住的事带回日历。</p></div><div class="connection-orbit" aria-hidden="true"><i></i><i></i><span class="seed-face">·ᴗ·</span><b>✦</b><em>✧</em></div><div id="providerCards" class="provider-grid"></div><div class="sync-paper"><strong>学习信息同步</strong><label><input id="syncEnabled" type="checkbox" disabled> 每分钟检查一次已授权来源</label><p id="syncStatus" role="status">等待连接服务。当前尚未读取任何账号消息或文件。</p><button id="checkConnections" type="button">检查连接状态</button></div>');
+  section('sources', '<div class="hub-heading"><span class="eyebrow">让消息，循着星轨而来</span><h2>把学习的来处，连在一起。</h2><p>由烁整理新消息与资料，把值得记住的事带回日历。</p></div><div class="connection-orbit" aria-hidden="true"><i></i><i></i><span class="seed-face">·ᴗ·</span><b>✦</b><em>✧</em></div><div id="providerCards" class="provider-grid"></div><div class="token-card" id="campusTokenCard"><div class="token-card-head"><div><span class="eyebrow">CAMPUS DATA</span><h3>校园数据令牌</h3></div><span class="token-badge" id="campusTokenState">未连接</span></div><p>烁通过你的杭电助手个人访问令牌读取课表、校园卡、电费等校园数据。令牌只保存在本浏览器，提问时交给团队后端向杭电助手查询。</p><div class="token-card-actions"><a href="https://neo.hduhelp.com/account/tokens/new" target="_blank" rel="noopener noreferrer">去获取令牌 ↗</a><button type="button" id="campusTokenBind">填写令牌</button></div></div><div class="sync-paper"><strong>学习信息同步</strong><label><input id="syncEnabled" type="checkbox" disabled> 每分钟检查一次已授权来源</label><p id="syncStatus" role="status">等待连接服务。当前尚未读取任何账号消息或文件。</p><button id="checkConnections" type="button">检查连接状态</button></div>');
   section('import','<div class="hub-heading"><span class="eyebrow">给散落的资料，一个落点</span><h2>交给烁，理出下一步。</h2><p>导入通知或笔记，核对提取出的事项，再放进你的日历。</p></div><label class="file-portal" id="filePortal"><span class="paper-creature" aria-hidden="true"><i>·ᴗ·</i><b>✦</b></span><strong>将文件拖入这片星光</strong><span id="fileFormats"></span><input id="learningFiles" type="file" multiple accept=".txt,.md,.csv"><span class="file-select">选择文件 ↗</span></label><div class="import-note" id="importMode"></div><p id="importStatus" role="status"></p><div id="fileResults"></div><button class="hub-primary" id="saveImported" disabled>将选中事项加入日历</button>');
   const cards = document.querySelector('#providerCards');
   const notice = document.querySelector('#syncStatus');
@@ -81,6 +81,18 @@
     }catch(e){notice.textContent=e.message}
   }
   document.querySelector('#checkConnections').onclick=refresh;
+  const tokenState=document.querySelector('#campusTokenState');
+  const tokenBind=document.querySelector('#campusTokenBind');
+  function paintToken(){
+    let saved='';
+    try{saved=localStorage.getItem('starwood.hduhelp.token')||''}catch(e){}
+    tokenState.textContent=saved?'已绑定':'未连接';
+    tokenState.dataset.bound=saved?'1':'0';
+    tokenBind.textContent=saved?'更换令牌':'填写令牌';
+  }
+  tokenBind.onclick=()=>{ if(window.StarwoodTokenUI) window.StarwoodTokenUI.open(); };
+  addEventListener('starwood:token-changed',paintToken);
+  paintToken();
   document.querySelector('#syncEnabled').onchange=async e=>{
     try {
       await request('/sync/settings',{enabled:e.target.checked,intervalSeconds:60});

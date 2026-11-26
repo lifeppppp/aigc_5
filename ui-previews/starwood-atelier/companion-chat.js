@@ -10,12 +10,19 @@
   const send = dialog.querySelector('.chat-send');
   const feedback = dialog.querySelector('.chat-feedback');
   const endpoint = window.STARWOOD_CHAT?.endpoint?.trim() || '';
+  const campusToken = () => { try { return localStorage.getItem('starwood.hduhelp.token') || ''; } catch (e) { return ''; } };
   const history = [];
   let activeRequest = null;
   let focusedTask = null;
   let requestVersion = 0;
   let returnFocus;
-  dialog.querySelector('#chatMode').textContent = endpoint ? '百炼在线 · 学习辅助' : '本地演示 · 百炼待接入';
+  function paintMode() {
+    dialog.querySelector('#chatMode').textContent = endpoint
+      ? '百炼在线 · 学习辅助' + (campusToken() ? ' · 校园数据已连接' : ' · 校园数据未连接')
+      : '本地演示 · 百炼待接入';
+  }
+  paintMode();
+  window.addEventListener('starwood:token-changed', paintMode);
   function message(role, text) {
     const row = document.createElement('div');
     row.className = 'chat-message '+role;
@@ -27,7 +34,10 @@
     log.scrollTop = log.scrollHeight;
   }
   function greeting() {
-    message('assistant', endpoint ? '我在。你想讨论哪个知识点，或一起拆解哪件学习任务？' : '我在。现在可以演示查看当日计划、拆解学习任务和讲解曲率。自由问答将在接入百炼后提供。');
+    const base = endpoint ? '我在。你想讨论哪个知识点，或一起拆解哪件学习任务？' : '我在。现在可以演示查看当日计划、拆解学习任务和讲解曲率。自由问答将在接入百炼后提供。';
+    message('assistant', endpoint && !campusToken()
+      ? base + '\n\n还没有绑定校园令牌，目前我读不到你的课表与校园卡。点右上角「校园令牌」绑定后，可以直接问我今天有什么课、卡里还有多少钱。'
+      : base);
   }
   function context() {
     const simplify = task => ({
@@ -77,9 +87,13 @@
         const response = await fetch(endpoint,{
           method:'POST',headers:{'Content-Type':'application/json'},
           credentials:'same-origin',signal:controller.signal,
-          body:JSON.stringify({message:question,history:priorHistory,context:data})
+          body:JSON.stringify({message:question,history:priorHistory,context:data,token:campusToken() || undefined})
         });
-        if(!response.ok) throw new Error('服务暂时不可用（'+response.status+'），请稍后重试。');
+        if(!response.ok) {
+          const detail = await response.json().catch(()=>({}));
+          if(response.status===401) throw new Error(detail.detail || '校园令牌已失效，请点右上角「校园令牌」重新绑定。');
+          throw new Error('服务暂时不可用（'+response.status+'），请稍后重试。');
+        }
         const result = await response.json();
         if(typeof result.reply !== 'string' || !result.reply.trim()) throw new Error('服务返回的回复格式不正确，请联系项目维护者。');
         reply = result.reply;
