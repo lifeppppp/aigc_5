@@ -354,7 +354,26 @@
     box.append(go);
   }
 
+  /* 进门闸：打开星木就得先有账号令牌，没有就去登录页，登录完回到原来那一页。
+     令牌已存在但被 8020 判成无效也照样送回；服务连不上（网络抖、8020 重启中）不拦人，
+     免得情报服务一抖，全组连日历都打不开。 */
+  function needsLogin() {
+    if (!/^\/starwood\//.test(location.pathname)) return false;
+    const next = encodeURIComponent(location.pathname + location.search + location.hash);
+    if (!token()) { location.replace('login.html?next=' + next); return true; }
+    fetch(API + '/api/health', { headers: { 'X-Client-Token': token() } })
+      .then(r => {
+        if (r.status !== 401) return;
+        localStorage.removeItem(TK);
+        localStorage.removeItem('sentinel_account');
+        location.replace('login.html?next=' + next);
+      })
+      .catch(() => { /* 连不上不算没登录 */ });
+    return false;
+  }
+
   function start() {
+    if (needsLogin()) return;
     mountStyles();
     buildPanel();
     bindRail();

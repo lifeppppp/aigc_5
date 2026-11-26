@@ -73,9 +73,9 @@
   </form>
 
   <div class="foot">
-    登录后会自动回到星木，情报页签直接就是你的。<br>
+    登录后会自动回到你刚才那一页，情报页签直接就是你的。<br>
     想让「烁」读到课表与校园卡，再花一分钟到右上角 <b>校园令牌</b> 绑一次杭电助手个人令牌（每人自己的，只存本浏览器）。<br>
-    <a href="./">先随便逛逛，不登录 →</a>
+    星木需先登录：一人一个账号，组员之间互不可见。
   </div>
   <div class="plain">当前是 HTTP 明文连接，密码在传输途中没有加密。请不要使用你在其他网站用过的密码。</div>
 </main>
@@ -106,13 +106,23 @@
 
   function fail(msg) { errBox.textContent = msg; }
 
+  /* 进门闸带进来的 next 只认本站 /starwood/ 下的站内路径：
+     // 开头会被当成协议相对地址跳到外站，指回 login.html 自己则原地打转 */
+  function target() {
+    const here = location.pathname.replace(/login\.html$/, '');
+    const next = new URLSearchParams(location.search).get('next') || '';
+    const ok = next.startsWith('/starwood/') && !next.startsWith('//') && !next.includes('\\')
+      && !/login\.html?$/i.test(next);
+    if (!ok) return here + '#intel';
+    return next.includes('#') ? next : next + '#intel';
+  }
+
   function done(info) {
     localStorage.setItem('sentinel_token', info.token);
     localStorage.setItem('sentinel_account', JSON.stringify({
       username: info.username, member: info.member, label: info.label
     }));
-    const here = location.pathname.replace(/login\.html$/, '');
-    location.replace(here + '#intel');
+    location.replace(target());
   }
 
   form.onsubmit = async e => {
