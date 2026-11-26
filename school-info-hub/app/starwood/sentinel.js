@@ -339,10 +339,26 @@
     document.head.append(link);
   }
 
+  /* 「连接」页的学习通卡片原来只开官网登录页，用户在自家浏览器里登录，服务器看不见；
+     这里补一条云端授权入口，登录态落到自己的账号上，确认后自动开始扫描。 */
+  function bridgeChaoxing() {
+    const card = document.querySelector('.provider-card[data-provider="chaoxing"]');
+    if (!card || card.querySelector('.intel-hook')) return;
+    const box = card.querySelector('div') || card;
+    const go = el('button', 'intel-hook', '云端授权 · 确认登录并开启扫描 ↗');
+    go.type = 'button';
+    go.onclick = () => {
+      if (!token()) { location.href = 'login.html'; return; }
+      window.open(`${API}/grant#t=${encodeURIComponent(token())}&site=chaoxing`, '_blank');
+    };
+    box.append(go);
+  }
+
   function start() {
     mountStyles();
     buildPanel();
     bindRail();
+    bridgeChaoxing();
     if (location.hash === '#intel') {
       const btn = document.querySelector('[data-panel="intel"]');
       if (btn) {
