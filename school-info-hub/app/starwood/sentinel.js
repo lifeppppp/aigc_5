@@ -12,7 +12,7 @@
   const SESSION_MS = 30 * 86400000;
   /* 登录页也带版本号：旧版 login.html 不写 sentinel_login_ts，
      被缓存住就会让人一登录就被判成未登录 */
-  const LOGIN = 'login.html?v=6';
+  const LOGIN = 'login.html?v=8';
   /* 一次登录 30 天有效，起点是登录那一刻，中途常用不续期 */
   function clearLocal() {
     localStorage.removeItem(TK);
@@ -32,6 +32,15 @@
   const TYPES = ['作业', '考试', '学习', '计划'];
   const $ = s => document.querySelector(s);
   let loaded = false;
+  let lastAuth = [];
+
+  /* auto=1：授权页一打开就自己申请云端桌面。查询串是给授权页用的缓存版本号——
+     星木这边升 sentinel.js 时，grant 页也要跟着换，否则浏览器还在跑旧版授权页。 */
+  function openGrant(site) {
+    if (!token()) { location.href = LOGIN; return; }
+    window.open(`${API}/grant?v=2#t=${encodeURIComponent(token())}`
+      + `&site=${encodeURIComponent(site)}&auto=1`, '_blank');
+  }
 
   const pad = n => String(n).padStart(2, '0');
   const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
@@ -204,6 +213,9 @@
       b.addEventListener('click', () => {
         const intel = $('#intelPanel');
         if (!intel) return;
+        /* learning-hub.js 开机也会刷一次卡片，读的是 8010 那份恒空的 connections，
+           谁后跑谁说了算——点页签这一刻再按 8020 的授权态补一次才不会被打回「尚未连接」 */
+        if (b.dataset.panel === 'sources') syncCards();
         const mine = b.dataset.panel === 'intel';
         intel.hidden = !mine;
         if (mine && !loaded) load(true);
@@ -237,7 +249,7 @@
       const btn = el('button', 'intel-grant-btn', '去授权');
       Object.assign(btn.style, { marginLeft: '8px', padding: '2px 10px', cursor: 'pointer' });
       /* 令牌放 fragment：# 后面的内容不会发给服务器，也不会进访问日志 */
-      btn.onclick = () => window.open(`${API}/grant#t=${encodeURIComponent(token())}&site=${encodeURIComponent(a.site)}`, '_blank');
+      btn.onclick = () => openGrant(a.site);
       row.append(btn);
       warn.append(row);
     });
@@ -324,6 +336,7 @@
         req('/api/auth/status').catch(() => ({ auth: [] })),
       ]).then(([feed, auth]) => {
         setWarn(auth.auth || [], info.member);
+        syncCards(auth.auth || []);
         list.replaceChildren();
         const items = feed.items || [];
         loaded = true;
@@ -359,19 +372,49 @@
     document.head.append(link);
   }
 
-  /* 「连接」页的学习通卡片原来只开官网登录页，用户在自家浏览器里登录，服务器看不见；
-     这里补一条云端授权入口，登录态落到自己的账号上，确认后自动开始扫描。 */
+  /* 「连接」页的卡片原来只把人送去官网登录页（8010 的授权接口是 501 占位、
+     /connections 恒空），自家浏览器里扫完码服务器永远看不见。这里把能被云端
+     授权接管的站点改成走 8020：桌面登录一次，登录态落到自己的账号上。 */
+  const BRIDGE = [['chaoxing', 'chaoxing']];
   function bridgeChaoxing() {
-    const card = document.querySelector('.provider-card[data-provider="chaoxing"]');
-    if (!card || card.querySelector('.intel-hook')) return;
-    const box = card.querySelector('div') || card;
-    const go = el('button', 'intel-hook', '云端授权 · 确认登录并开启扫描 ↗');
-    go.type = 'button';
-    go.onclick = () => {
-      if (!token()) { location.href = LOGIN; return; }
-      window.open(`${API}/grant#t=${encodeURIComponent(token())}&site=chaoxing`, '_blank');
-    };
-    box.append(go);
+    BRIDGE.forEach(([provider, site]) => {
+      const card = document.querySelector(`.provider-card[data-provider="${provider}"]`);
+      const btn = card && card.querySelector('button');
+      if (!btn || btn.dataset.sentinel) return;
+      btn.dataset.sentinel = '1';
+      btn.textContent = '云端授权 ↗';
+      btn.onclick = () => openGrant(site);
+      const box = card.querySelector('div') || card;
+      /* learning-hub.js 的 refresh() 绑在 window focus 上，读的是 8010 那份恒空的
+         connections——和它抢同一个节点永远抢不完，所以藏掉它，另起一行自己写 */
+      const dead = box.querySelector('small');
+      if (dead) dead.style.display = 'none';
+      box.append(el('span', 'intel-provider-state', '正在读取云端授权状态…'));
+    });
+  }
+
+  /* 卡片状态读 8020 的授权态；「检查连接状态」是 learning-hub.js 绑的，
+     它刷完我们再补一次，保证看到的一直是真实的那一份 */
+  function syncCards(rows) {
+    lastAuth = rows && rows.length ? rows : lastAuth;
+    BRIDGE.forEach(([provider, site]) => {
+      const card = document.querySelector(`.provider-card[data-provider="${provider}"]`);
+      const line = card && card.querySelector('.intel-provider-state');
+      const a = lastAuth.find(x => x.site === site);
+      if (!line || !a || !a.enabled) return;
+      const live = a.encrypted && a.status === 'ok';
+      line.textContent = live ? '已连接 · 云端已记住登录态，每 3 分钟自动读一次'
+        : (a.status === 'expired' || a.status === 'error') ? '登录态已失效 · 点「云端授权」重新登录一次'
+        : '未授权 · 点「云端授权」在云端浏览器里登录一次';
+      line.classList.toggle('ok', live);
+      card.classList.toggle('is-connected', live);
+    });
+    const chk = $('#checkConnections');
+    if (chk && chk.onclick && !chk.dataset.sentinel) {
+      chk.dataset.sentinel = '1';
+      const orig = chk.onclick;
+      chk.onclick = async (e) => { await orig(e); syncCards(); };
+    }
   }
 
   /* 进门闸：打开星木就得先有账号令牌，没有就去登录页，登录完回到原来那一页。
@@ -424,6 +467,17 @@
     bindRail();
     bridgeChaoxing();
     guardFeatures();
+    /* 卡片状态在情报页里才会拉到，只逛「连接」页的人得自己取一次 */
+    req('/api/auth/status').then(a => syncCards(a.auth || [])).catch(() => {});
+    /* 云端授权是在别的页签里做完的，切回来顺手刷一次，别让人以为页面没反应。
+       20 秒节流：这是补一次刷新，不是改成轮询。 */
+    let lastBack = 0;
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden || !token() || document.body.dataset.activePanel !== 'intel') return;
+      if (Date.now() - lastBack < 20000) return;
+      lastBack = Date.now();
+      load(true);
+    });
     if (location.hash === '#intel') {
       const btn = document.querySelector('[data-panel="intel"]');
       if (btn) {

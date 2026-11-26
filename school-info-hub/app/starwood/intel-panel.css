@@ -42,6 +42,7 @@
 #intelPanel .intel-foot{margin:20px 0 0;font-size:9px;color:#7d7663}
 @media(max-width:680px){#intelPanel .intel-head{align-items:flex-start}#intelPanel .intel-item{padding:16px 14px}#intelPanel .intel-todo{gap:9px}}
 
-/* 「连接」页学习通卡片上的云端授权入口（sentinel.js 注入），样式装得像该卡片自己的链接 */
-.provider-card .intel-hook{display:block;background:none;border:0;padding:0;margin:2px 0 0;font:10px/1.7 inherit;color:#4f6954;cursor:pointer;text-align:left;text-decoration:underline dashed;text-underline-offset:3px}
-.provider-card .intel-hook:hover{color:#2f4a38}
+/* 「连接」页卡片上的云端授权状态（sentinel.js 注入）：8010 那份 connections 恒空，
+   卡片原本的 small 只会写「尚未连接」，这里换成 8020 的真实授权态 */
+.provider-card .intel-provider-state{display:block;margin:2px 0 0;font:10px/1.7 inherit;color:#8a6a2a}
+.provider-card .intel-provider-state.ok{color:#2f6a48}
