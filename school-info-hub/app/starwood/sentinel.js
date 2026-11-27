@@ -38,7 +38,7 @@
      星木这边升 sentinel.js 时，grant 页也要跟着换，否则浏览器还在跑旧版授权页。 */
   function openGrant(site) {
     if (!token()) { location.href = LOGIN; return; }
-    window.open(`${API}/grant?v=2#t=${encodeURIComponent(token())}`
+    window.open(`${API}/grant?v=connect3#t=${encodeURIComponent(token())}`
       + `&site=${encodeURIComponent(site)}&auto=1`, '_blank');
   }
 
@@ -245,8 +245,8 @@
     if (!bad.length) { warn.hidden = true; return; }
     bad.forEach(a => {
       const row = el('div', 'intel-warn-row',
-        `${a.label}：${a.encrypted ? '登录态已失效' : '还没有授权'}，点右边「去授权」在云端浏览器里登录一次就行，不用装 Python 也不需要服务器权限`);
-      const btn = el('button', 'intel-grant-btn', '去授权');
+        `${a.label}：${a.encrypted ? '登录态已失效' : '还没有授权'}，点右边「连接」完成平台登录，再返回管理来源刷新连接状态`);
+      const btn = el('button', 'intel-grant-btn', '连接');
       Object.assign(btn.style, { marginLeft: '8px', padding: '2px 10px', cursor: 'pointer' });
       /* 令牌放 fragment：# 后面的内容不会发给服务器，也不会进访问日志 */
       btn.onclick = () => openGrant(a.site);
@@ -375,46 +375,93 @@
   /* 「连接」页的卡片原来只把人送去官网登录页（8010 的授权接口是 501 占位、
      /connections 恒空），自家浏览器里扫完码服务器永远看不见。这里把能被云端
      授权接管的站点改成走 8020：桌面登录一次，登录态落到自己的账号上。 */
-  const BRIDGE = [['chaoxing', 'chaoxing']];
+  const BRIDGE = [['chaoxing', 'chaoxing'], ['hdu', 'hdu-i'], ['hdu-erke', 'hdu-erke']];
   function bridgeChaoxing() {
+    const grid=$('#providerCards');
+    const hdu=grid?.querySelector('[data-provider=hdu]');
+    if(hdu){
+      hdu.querySelector('h3').textContent='数字杭电';
+      hdu.querySelector('p').textContent='个人教务 · 课程通知';
+      if(!grid.querySelector('[data-provider=hdu-erke]')){
+        const card=hdu.cloneNode(true);card.dataset.provider='hdu-erke';
+        card.querySelector('h3').textContent='第二课堂';card.querySelector('p').textContent='青春杭电 · 校园活动';
+        grid.append(card);
+      }
+    }
     BRIDGE.forEach(([provider, site]) => {
       const card = document.querySelector(`.provider-card[data-provider="${provider}"]`);
       const btn = card && card.querySelector('button');
       if (!btn || btn.dataset.sentinel) return;
       btn.dataset.sentinel = '1';
-      btn.textContent = '云端授权 ↗';
+      btn.textContent = '连接 ↗';
       btn.onclick = () => openGrant(site);
       const box = card.querySelector('div') || card;
       /* learning-hub.js 的 refresh() 绑在 window focus 上，读的是 8010 那份恒空的
          connections——和它抢同一个节点永远抢不完，所以藏掉它，另起一行自己写 */
       const dead = box.querySelector('small');
       if (dead) dead.style.display = 'none';
-      box.append(el('span', 'intel-provider-state', '正在读取云端授权状态…'));
+      box.append(el('span', 'intel-provider-state', '正在检查连接…'));
     });
   }
 
   /* 卡片状态读 8020 的授权态；「检查连接状态」是 learning-hub.js 绑的，
      它刷完我们再补一次，保证看到的一直是真实的那一份 */
   function syncCards(rows) {
-    lastAuth = rows && rows.length ? rows : lastAuth;
+    lastAuth = Array.isArray(rows) ? rows : lastAuth;
     BRIDGE.forEach(([provider, site]) => {
       const card = document.querySelector(`.provider-card[data-provider="${provider}"]`);
       const line = card && card.querySelector('.intel-provider-state');
       const a = lastAuth.find(x => x.site === site);
-      if (!line || !a || !a.enabled) return;
+      if (!line) return;
+      const button=card.querySelector('button');
+      if(!a||!a.enabled){line.textContent='该来源尚未启用';button.disabled=true;card.classList.remove('is-connected');return;}
+      button.disabled=false;
       const live = a.encrypted && a.status === 'ok';
-      line.textContent = live ? '已连接 · 云端已记住登录态，每 3 分钟自动读一次'
-        : (a.status === 'expired' || a.status === 'error') ? '登录态已失效 · 点「云端授权」重新登录一次'
-        : '未授权 · 点「云端授权」在云端浏览器里登录一次';
+      line.textContent = live ? '已连接 · 已记住登录状态'
+        : (a.status === 'expired' || a.status === 'error') ? '连接已失效 · 点击连接重新登录'
+        : '未连接 · 点击连接完成登录';
       line.classList.toggle('ok', live);
       card.classList.toggle('is-connected', live);
     });
-    const chk = $('#checkConnections');
-    if (chk && chk.onclick && !chk.dataset.sentinel) {
-      chk.dataset.sentinel = '1';
-      const orig = chk.onclick;
-      chk.onclick = async (e) => { await orig(e); syncCards(); };
-    }
+  }
+
+  function installRefresh() {
+    const sources = $('#sourcesPanel');
+    const old = sources?.querySelector('.sync-paper');
+    if (!old) return;
+    old.replaceChildren();
+    old.classList.add('connect-controls');
+    const button = el('button', 'intel-btn', '刷新连接状态');
+    button.id = 'checkConnections';
+    const message = el('p', 'connect-progress', '完成平台登录后，刷新连接状态以确认连接并开始扫描。');
+    message.setAttribute('role', 'status');
+    old.append(button, message);
+    button.onclick = async () => {
+      button.disabled = true;
+      let scanStarted = false;
+      try {
+        for(let attempt=0;attempt<16;attempt++){
+          const response=await fetch(API+'/api/connect/refresh',{
+            method:'POST',headers:{'X-Client-Token':token(),'Content-Type':'application/json'},
+            body:JSON.stringify({force:attempt===0}),signal:AbortSignal.timeout(25000)
+          });
+          const data=await response.json().catch(()=>({}));
+          if(!response.ok)throw Error(data.detail||'连接检查失败');
+          scanStarted=scanStarted||data.scan_started;
+          const auth=await req('/api/auth/status');
+          syncCards(auth.auth||[]);
+          const count=(data.connections||[]).filter(x=>x.status==='connected').length;
+          message.textContent=data.pending?'正在确认登录并保存连接，请稍候…'
+            :count?(scanStarted?'已确认 '+count+' 个来源，已加入扫描队列。可到学习动态查看读取结果。':'已确认 '+count+' 个来源。其余来源请完成登录后再刷新。')
+            :'尚未完成平台登录，请点击对应平台的连接按钮。';
+          if(!data.pending)break;
+          if(attempt===15){message.textContent='连接仍在确认中，请先完成登录，再刷新连接状态。';break;}
+          await new Promise(resolve=>setTimeout(resolve,3000));
+        }
+      } catch(error) {
+        message.textContent=error.name==='TimeoutError'?'检查超时，请稍后重新刷新。':error.message;
+      } finally {button.disabled=false;}
+    };
   }
 
   /* 进门闸：打开星木就得先有账号令牌，没有就去登录页，登录完回到原来那一页。
@@ -466,6 +513,7 @@
     buildPanel();
     bindRail();
     bridgeChaoxing();
+    installRefresh();
     guardFeatures();
     /* 卡片状态在情报页里才会拉到，只逛「连接」页的人得自己取一次 */
     req('/api/auth/status').then(a => syncCards(a.auth || [])).catch(() => {});

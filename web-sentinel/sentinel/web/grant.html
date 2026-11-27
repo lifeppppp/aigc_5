@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="zh-CN">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>连接学习来源 · 星木</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#142c40;color:#435e4c;font:14px/1.8 system-ui,"Microsoft YaHei",sans-serif}.shell{max-width:1380px;margin:auto;padding:20px}header{display:flex;justify-content:space-between;align-items:center;color:#e8e7d5;margin-bottom:18px}header span{letter-spacing:3px}a{color:inherit;text-decoration:none}.paper{border:1px solid #dedcca;border-radius:15px;background:#faf9f1;padding:24px;box-shadow:0 15px 50px #06152230}.intro{display:flex;align-items:center;gap:20px;justify-content:space-between}h1{font:28px/1.5 STSong,SimSun,serif;margin:0 0 6px}p{font-size:13px;color:#7e8d78;margin:0}.state{padding:8px 16px;background:#eaf0e2;border:1px solid #d5dfc9;border-radius:24px;white-space:nowrap;font-size:12px}#screen{height:min(75vh,990px);min-height:450px;border:1px solid #d5dfcc;border-radius:9px;overflow:hidden;background:#edf0e5;margin-top:20px}#screen[hidden]{display:none}#rfb{width:100%;height:100%}.message{padding:35px 0;font-size:14px;color:#78856f}.actions{display:flex;gap:12px;margin-top:18px;align-items:center}button,.return{font:13px inherit;padding:10px 18px;border:1px solid #cbd7be;border-radius:7px;background:#e7eddc;color:#48654e;cursor:pointer}.return{display:inline-block}button[hidden]{display:none}.success{padding:55px 12px;text-align:center}.success strong{font:28px STSong,SimSun,serif;display:block;margin-bottom:16px}#saved[hidden]{display:none}.mark{display:inline-grid;place-items:center;width:48px;height:53px;border-radius:45% 55% 48% 48%;background:linear-gradient(120deg,#fffde9,#cddbc3);color:#627b5b;margin-right:10px;font-size:23px;transform:rotate(-8deg)}@media(max-width:650px){.shell{padding:12px}.paper{padding:17px}.intro{align-items:flex-start;gap:10px}h1{font-size:22px}.state{font-size:10px;padding:6px 10px}#screen{height:70vh;min-height:400px}header{font-size:12px}.intro p{font-size:11px}.actions{flex-wrap:wrap}}
+</style></head><body><div class="shell"><header><span>✦ 星木 · 学习连接</span><a id="backTop">返回管理来源 ↗</a></header><main class="paper"><div class="intro"><div><h1 id="title">正在打开登录页面</h1><p>完成平台登录后，星木会自动记住连接。返回管理来源，刷新连接状态即可开始扫描。</p></div><span class="state" id="state" role="status">准备中</span></div><div id="message" class="message" role="status">正在准备你的登录页面…</div><section id="screen" aria-label="学习平台登录页面" hidden><div id="rfb"></div></section><section id="saved" class="success" hidden><span class="mark" aria-hidden="true">·ᴗ·</span><strong>连接已保存</strong><p>回到管理来源，点击「刷新连接状态」开始读取新内容。</p></section><div class="actions"><a class="return" id="back">返回管理来源</a><button id="retry" hidden>重新打开登录页面</button></div></main></div>
+<script type="module">
+import RFB from "/grant/novnc/core/rfb.js";
+const $=id=>document.getElementById(id);
+const fragment=new URLSearchParams(location.hash.slice(1));
+const site=fragment.get('site')||sessionStorage.getItem('starwood_connect_site')||'';
+const token=fragment.get('t')||sessionStorage.getItem('sentinel_grant_token')||'';
+history.replaceState(null,'',location.pathname+location.search);
+const back=new URL(location.href);back.port='8010';back.pathname='/starwood/';back.search='';back.hash='sources';
+for(const id of ['back','backTop'])$(id).href=back.href;
+let rfb=null,timer=null,busy=false,connecting=false,stopped=false;
+async function api(path,data){
+ const response=await fetch(path,{method:data?'POST':'GET',headers:{'X-Client-Token':token,...(data?{'Content-Type':'application/json'}:{})},body:data?JSON.stringify(data):undefined,signal:AbortSignal.timeout(25000)});
+ const result=await response.json().catch(()=>({}));
+ if(!response.ok)throw Error(typeof result.detail==='string'?result.detail:'连接服务暂时不可用');
+ return result;
+}
+function fail(message){$('state').textContent='连接未完成';$('message').textContent=message;$('retry').hidden=false;}
+async function attach(){
+ if(connecting||rfb)return;connecting=true;
+ try{
+  const ticket=await api('/api/grant/ticket',{site});
+  if(stopped)return;
+  const protocol=location.protocol==='https:'?'wss':'ws';
+  rfb=new RFB($('rfb'),protocol+'://'+location.host+ticket.ws+'?ticket='+encodeURIComponent(ticket.ticket),{shared:true,credentials:{password:ticket.password}});
+  rfb.scaleViewport=true;rfb.clipViewport=false;
+  $('screen').hidden=false;
+  rfb.addEventListener('connect',()=>{$('state').textContent='等待登录';$('message').textContent='在下方输入平台账号密码、验证码，或扫码登录。登录成功后会自动保存。'});
+  rfb.addEventListener('credentialsrequired',()=>rfb?.sendCredentials({password:ticket.password}));
+  rfb.addEventListener('disconnect',()=>{rfb=null;if(!stopped)$('message').textContent='正在检查连接状态…';});
+ }catch(error){fail(error.message)}finally{connecting=false;}
+}
+async function refresh(){
+ if(busy||stopped)return;busy=true;
+ try{
+  const status=await api('/api/grant/status?site='+encodeURIComponent(site));
+  if(status.state==='saved'){
+   stopped=true;clearInterval(timer);rfb?.disconnect();rfb=null;
+   $('screen').hidden=true;$('saved').hidden=false;$('state').textContent='已连接';$('message').textContent='登录状态已按你的账号加密保存。';$('retry').hidden=true;
+  }else if(status.state==='ready'){
+   await attach();
+  }else if(status.state==='queued'){
+   $('state').textContent='准备登录页面';$('message').textContent='正在启动你的专属登录页面，请稍候…';
+  }else if(status.state==='expired'||status.state==='error'){
+   fail(status.note||'连接已失效，请重新登录。');clearInterval(timer);
+  }
+ }catch(error){fail(error.message)}finally{busy=false;}
+}
+async function start(){
+ if(!token||!site){fail('请回到星木「管理来源」，点击需要连接的平台。');return;}
+ sessionStorage.setItem('sentinel_grant_token',token);sessionStorage.setItem('starwood_connect_site',site);
+ $('retry').hidden=true;$('saved').hidden=true;stopped=false;
+ try{
+  const status=await api('/api/auth/status'),item=(status.auth||[]).find(x=>x.site===site);
+  if(!item||!item.enabled)throw Error('该平台尚未配置，请返回管理来源。');
+  $('title').textContent='连接'+item.label;
+  // A click on Connect always opens that site's login session, including expired saved states.
+  await api('/api/grant/start',{site});
+  clearInterval(timer);timer=setInterval(refresh,2500);await refresh();
+ }catch(error){fail(error.message)}
+}
+$('retry').onclick=()=>{rfb?.disconnect();rfb=null;start()};
+addEventListener('pagehide',()=>{clearInterval(timer);stopped=true;rfb?.disconnect()},{once:true});
+start();
+</script></body></html>

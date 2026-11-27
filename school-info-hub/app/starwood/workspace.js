@@ -45,6 +45,7 @@
     }
     centerButton.addEventListener('click',()=>{selectCenter(centerView);document.querySelector('.engraving').textContent='学习中心';});
     selectCenter('feed');
+    if(location.hash==='#sources'){centerButton.click();selectCenter('sources');history.replaceState(null,'',location.pathname+location.search);}
 
     const reduced=matchMedia('(prefers-reduced-motion: reduce)');
     let switching=false,pending=null;

@@ -106,3 +106,11 @@ body.compact-layout .compact-welcome{min-height:125px}
 }
 
 .companion-dock[hidden]{display:none!important}
+
+/* Connect and login form one flow; the refresh action confirms and starts reading. */
+#intelPanel .sync-paper.connect-controls{display:flex;align-items:center;gap:16px;margin-top:22px}
+.connect-controls button{white-space:nowrap;flex:none}
+.connect-controls p{margin:0;font-size:12px;line-height:1.8;color:#76866e}
+@media(max-width:700px){#intelPanel .sync-paper.connect-controls{align-items:stretch;flex-direction:column;gap:12px}}
+
+.intel-provider-state{display:block;font-size:11px!important;line-height:1.8;margin-top:6px}

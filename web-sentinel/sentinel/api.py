@@ -260,7 +260,7 @@ def grant_start(body: GrantIn, member: str = Depends(verify)):
     name = _grant_site(body.site, member)
     # 上一轮的说明（没登录成功/已确认）从这一轮重新算，免得旧提示误导
     browser.clear_note(f"{name}--{member}")
-    r = _systemd(f"web-sentinel-grant@{name}--{member}", "start", "--no-block", timeout=20)
+    r = _systemd(f"web-sentinel-grant@{name}--{member}", "restart", "--no-block", timeout=20)
     if r.returncode:
         raise HTTPException(status_code=502,
                             detail=f"授权会话启动失败：{(r.stderr or r.stdout).strip()[:300]}")
@@ -391,6 +391,7 @@ def run_now(body: RunIn, member: str = Depends(verify)):
         cmd.append("--force")
     log_path = config.DATA / ("poll.log" if mode == "fast" else "scan.log")
     log = open(log_path, "ab")
+    cmd = ["/usr/bin/flock", "-w", "900", str(config.RUN / "scan.lock")] + cmd
     subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, start_new_session=True,
                      cwd=str(pathlib.Path(__file__).parent))
     label = "拍图看图" if mode == "full" else "只读正文"
@@ -441,3 +442,54 @@ def account_password(body: PasswordUpdate, member: str = Depends(verify)):
         return accounts.update_credentials(member, body.current_password, new_password=body.new_password)
     except accounts.AccountError as error:
         raise HTTPException(400, str(error))
+
+class ConnectRefreshIn(BaseModel):
+    force: bool = False
+
+
+@app.post("/api/connect/refresh")
+def connect_refresh(body: ConnectRefreshIn, member: str = Depends(verify)):
+    """Confirm only this member's pending sessions, then schedule their first read."""
+    import fcntl
+    import json
+    rows = []
+    pending = False
+    for item in _own_sites(config.read_sites(), member):
+        if not item.get("enabled", True):
+            continue
+        site = item["name"]
+        if not item.get("needs_auth", True):
+            rows.append({"site": site, "label": item.get("label", site), "status": "connected", "fingerprint": 0})
+            continue
+        state = _grant_state(site, member)
+        if state["state"] == "ready":
+            marker = config.RUN / ("grant-done-" + state["key"])
+            marker.touch(mode=0o600, exist_ok=True)
+        waiting = state["state"] in ("ready", "queued")
+        pending = pending or waiting
+        connected = state["state"] == "saved"
+        rows.append({"site": site, "label": item.get("label", site),
+                     "status": "connected" if connected else "checking" if waiting else "disconnected",
+                     "note": state.get("note", ""),
+                     "fingerprint": vault.fingerprint(site, member) if connected else 0})
+    connected = [row for row in rows if row["status"] == "connected"]
+    started = False
+    if connected and not pending:
+        signature = json.dumps({row["site"]: row["fingerprint"] for row in connected}, sort_keys=True)
+        lockpath = config.RUN / ("connect-refresh-" + vault.slug(member) + ".lock")
+        record = config.RUN / ("connect-scan-" + vault.slug(member) + ".json")
+        with open(lockpath, "a+") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            try:
+                last = json.loads(record.read_text()) if record.exists() else {}
+            except (ValueError, OSError):
+                last = {}
+            changed = last.get("signature") != signature
+            if changed or (body.force and time.time() - last.get("time", 0) >= 15):
+                run_now(RunIn(mode="fast"), member=member)
+                tmp = record.with_suffix(".tmp")
+                tmp.write_text(json.dumps({"signature": signature, "time": time.time()}))
+                tmp.chmod(0o600)
+                tmp.replace(record)
+                started = True
+    return {"connections": rows, "pending": pending, "scan_started": started}
