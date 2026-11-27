@@ -150,7 +150,7 @@
     if(!document.hidden && !document.body.classList.contains("arrival-open")){
       if(time>nextBlink){blinkStart=time;nextBlink=time+3600+Math.random()*2600;}
       if(!document.querySelector("#orbitPanel").hidden) draw(large,time,false);
-      else if(document.body.dataset.activePanel!=="sources") draw(mini,time,true);
+      else if(!dock.hidden && document.body.dataset.activePanel!=="sources") draw(mini,time,true);
       reaction*=Math.exp(-elapsed/650);
     }
     requestAnimationFrame(frame);
