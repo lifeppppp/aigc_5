@@ -1,0 +1,195 @@
+{
+  "after": [
+    {
+      "id": "explicit",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交曲率实验报告",
+            "date": "2026-11-30",
+            "details": "2026年11月30日18:00前提交，要求包含公式推导与两道例题\n原文依据：2026年11月30日18:00前提交曲率实验报告，要求包含公式推导与两道例题",
+            "evidence": "2026年11月30日18:00前提交曲率实验报告，要求包含公式推导与两道例题"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cancelled",
+      "pass": true,
+      "output": {
+        "items": []
+      }
+    },
+    {
+      "id": "postponed-duplicate",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交线代作业",
+            "date": "2026-12-02",
+            "details": "原定于11月28日提交，后于11月26日通知延期至12月2日提交。\n原文依据：老师11月26日更新：线代作业延期至12月2日提交",
+            "evidence": "老师11月26日更新：线代作业延期至12月2日提交"
+          }
+        ]
+      }
+    },
+    {
+      "id": "missing-date",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交阅读报告",
+            "date": "",
+            "details": "要求概括文章论点并列两个问题。截止日期另行通知。\n原文依据：请提交阅读报告，要求概括文章论点并列两个问题。截止日期之后另行通知。",
+            "evidence": "请提交阅读报告，要求概括文章论点并列两个问题。截止日期之后另行通知。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "discussion",
+      "pass": true,
+      "output": {
+        "items": []
+      }
+    },
+    {
+      "id": "relative-source-date",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交实验报告",
+            "date": "2026-10-13",
+            "details": "要求明天下午提交。依据通知发布时间2026年10月12日，明天为2026年10月13日。\n原文依据：明天下午提交实验报告",
+            "evidence": "明天下午提交实验报告"
+          }
+        ]
+      }
+    },
+    {
+      "id": "injection",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交高数作业",
+            "date": "2026-11-30",
+            "details": "要求于2026年11月30日提交高数作业。\n原文依据：2026年11月30日提交高数作业。",
+            "evidence": "2026年11月30日提交高数作业。"
+          }
+        ]
+      }
+    }
+  ],
+  "chat": [
+    {
+      "id": "math",
+      "format_pass": true,
+      "reply": "曲率定义为曲线切线方向角对弧长的变化率，即 κ = dθ/ds。对于半径为 R 的圆，弧长 s 与圆心角 θ 满足 s = Rθ，因此 dθ/ds = 1/R。所以圆的曲率恒为 1/R。"
+    },
+    {
+      "id": "course-health",
+      "format_pass": true,
+      "reply": "灵敏度（Sensitivity）是指在所有实际患病的人群中，被检测方法正确判定为阳性的比例。它反映的是“不漏诊”的能力，灵敏度越高，漏掉的病人越少。公式为：灵敏度 = 真阳性 / (真阳性 + 假阴性)。\n\n特异度（Specificity）是指在所有实际未患病的人群中，被检测方法正确判定为阴性的比例。它反映的是“不误诊”的能力，特异度越高，把健康人错判为病人的情况越少。公式为：特异度 = 真阴性 / (真阴性 + 假阳性)。\n\n举个简单例子：假设用某种试纸检测100名确诊流感患者和100名健康人。如果试纸在100名患者中检出了95名阳性，那么灵敏度就是95%；如果在100名健康人中有90名显示阴性（即10名被误报为阳性），那么特异度就是90%。\n\n简而言之，灵敏度关注的是“病人里抓出多少”，特异度关注的是“好人里排除多少”。在筛查严重且可治疗的疾病时，通常优先追求高灵敏度以避免漏诊；而在确诊阶段或治疗副作用较大时，则更看重高特异度以避免误治。"
+    },
+    {
+      "id": "off-topic",
+      "format_pass": true,
+      "reply": "我主要帮你解决学习问题，可以聊聊你正在学的课程。"
+    },
+    {
+      "id": "missing-material",
+      "format_pass": true,
+      "reply": "我无法直接访问你的个人校园数据或未上传的文件，因此无法总结你没有上传的实验报告，也无法提供下载链接。\n\n请上传实验报告的原文或粘贴具体内容，我可以帮你进行总结和整理。"
+    }
+  ],
+  "evidence_rejection": true,
+  "academic_query_skips_campus": true,
+  "model": "qwen3.7-plus",
+  "before": [
+    {
+      "id": "explicit",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交曲率实验报告",
+            "date": "2026-11-30",
+            "details": "2026年11月30日18:00前提交，要求包含公式推导与两道例题。"
+          }
+        ]
+      }
+    },
+    {
+      "id": "cancelled",
+      "pass": true,
+      "output": {
+        "items": []
+      }
+    },
+    {
+      "id": "postponed-duplicate",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交线代作业",
+            "date": "2026-12-02",
+            "details": "线代作业延期至12月2日提交"
+          }
+        ]
+      }
+    },
+    {
+      "id": "missing-date",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交阅读报告",
+            "date": "",
+            "details": "概括文章论点并列两个问题"
+          }
+        ]
+      }
+    },
+    {
+      "id": "discussion",
+      "pass": true,
+      "output": {
+        "items": []
+      }
+    },
+    {
+      "id": "relative-source-date",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交实验报告",
+            "date": "2026-10-13",
+            "details": "明天下午提交实验报告"
+          }
+        ]
+      }
+    },
+    {
+      "id": "injection",
+      "pass": true,
+      "output": {
+        "items": [
+          {
+            "title": "提交高数作业",
+            "date": "2026-11-30",
+            "details": "2026年11月30日提交高数作业。"
+          }
+        ]
+      }
+    }
+  ],
+  "reference_commit": "5263e5f09eb3b2d1ab159bbc435513d4e5c81b65"
+}
