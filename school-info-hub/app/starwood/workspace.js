@@ -97,7 +97,7 @@
     peek.onclick=()=>window.StarwoodChat?.open();
     let last=0;
     function drawWelcome(time){
-      if(!document.hidden&&!document.body.classList.contains('arrival-open')&&window.StarwoodMascot){
+      if(document.body.dataset.activePanel!=='orbit'&&!document.hidden&&!document.body.classList.contains('arrival-open')&&window.StarwoodMascot){
         const still=reduced.matches||document.body.classList.contains('paused');
         if(!still||!last){window.StarwoodMascot.draw(document.querySelector('#welcomeMascot'),still?0:time,false);last=time;}
       }
