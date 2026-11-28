@@ -1,30 +1,9 @@
 (() => {
   const dialog = document.createElement('dialog');
   dialog.className = 'chat-dialog';
-  dialog.id = 'starCompanionConversation';
   dialog.setAttribute('aria-labelledby','chatTitle');
   dialog.innerHTML = '<header class="chat-head"><div><span class="chat-mark">✧</span><div><h2 id="chatTitle">烁 · 学习伙伴</h2><span id="chatMode"></span></div></div><button type="button" class="chat-close" aria-label="关闭对话">×</button></header><div class="chat-messages" role="log" aria-label="与烁的对话" aria-live="polite"></div><div class="chat-quick"><button type="button">今天先做什么？</button><button type="button">帮我拆解任务</button><button type="button">讲解曲率</button></div><form class="chat-form"><label class="sr-only" for="chatInput">输入学习问题</label><textarea id="chatInput" rows="2" maxlength="2000" placeholder="问一个知识点，或说说你遇到的学习难题……"></textarea><div class="chat-form-foot"><button type="button" class="chat-reset">清空对话</button><button type="submit" class="chat-send">发送 ↑</button></div><p class="chat-feedback" role="status"></p></form>';
-  const orbit = document.querySelector('#orbitPanel');
-  const intro = orbit.querySelector('.companion-copy');
-  const layout = intro.parentElement;
-  const opener = orbit.querySelector('#openOrbitChat');
-  const mascot = orbit.querySelector('#sprite');
   document.body.append(dialog);
-
-  function setInline(active) {
-    layout.classList.toggle('in-conversation', active);
-    intro.inert = active;
-    for (const button of [opener, mascot]) {
-      button.setAttribute('aria-expanded', String(active));
-      button.setAttribute('aria-controls', dialog.id);
-    }
-  }
-
-  // Navigating away releases the shared chat for task-specific entry points.
-  new MutationObserver(() => {
-    if (orbit.hidden && dialog.open && layout.contains(dialog)) dialog.close();
-  }).observe(orbit, {attributes:true, attributeFilter:['hidden']});
-
   const log = dialog.querySelector('.chat-messages');
   const input = dialog.querySelector('textarea');
   const form = dialog.querySelector('form');
@@ -143,15 +122,8 @@
       focusedTask = task;
       if(!dialog.open) {
         returnFocus=document.activeElement;
-        if (!orbit.hidden) {
-          layout.append(dialog);
-          setInline(true);
-          dialog.show();
-        } else {
-          document.body.append(dialog);
-          dialog.showModal();
-          document.body.classList.add('chat-open');
-        }
+        dialog.showModal();
+        document.body.classList.add('chat-open');
       }
       if(!log.children.length) greeting();
       if(prefill) input.value = prefill;
@@ -169,17 +141,8 @@
   });
   dialog.querySelector('.chat-close').onclick = () => dialog.close();
   dialog.addEventListener('close', () => {
-    if (dialog.open) return;
-    setInline(false);
     document.body.classList.remove('chat-open');
-    if (orbit.hidden && orbit.contains(returnFocus)) return;
     returnFocus?.focus({preventScroll:true});
-  });
-  orbit.addEventListener('keydown', event => {
-    if (event.key === 'Escape' && dialog.open && layout.contains(dialog)) {
-      event.preventDefault();
-      dialog.close();
-    }
   });
   dialog.querySelector('.chat-reset').onclick = () => {
     ++requestVersion;activeRequest?.abort();activeRequest=null;send.disabled=false;

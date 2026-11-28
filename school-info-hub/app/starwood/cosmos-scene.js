@@ -87,7 +87,7 @@
       ctx.setTransform(ratio,0,0,ratio,0,0);
       let seed=companion?718:818;
       const random=()=>{seed=seed*16807%2147483647;return seed/2147483647;};
-      stars=Array.from({length:companion?Math.min(320,Math.max(85,Math.round(width*height/3400))):Math.min(540,Math.round(width*height/2100))},()=>({
+      stars=Array.from({length:companion?85:Math.min(540,Math.round(width*height/2100))},()=>({
         x:random()*width,y:random()*height,r:.2+random()*1.1,
         phase:random()*6.28,depth:.2+random()*.8
       }));
@@ -188,9 +188,6 @@
   }
   window.StarwoodCosmos={create};
   const canvas=document.querySelector('#orbitParticles');
-  // The scene belongs to the whole companion surface, including its text column.
-  const surface=document.querySelector('#orbitPanel');
-  surface.prepend(canvas);
   const scene=create(canvas,'companion');
   const reduced=matchMedia('(prefers-reduced-motion: reduce)');
   const panel=document.querySelector('#orbitPanel');
