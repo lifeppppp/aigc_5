@@ -117,3 +117,31 @@ body.compact-layout .compact-welcome{min-height:125px}
 
 /* The companion page already has its main Shuo. */
 body[data-active-panel="orbit"] .desk-peek{display:none}
+
+/* Both views share the same grid cell, above the existing star field. */
+.companion-layout > .companion-copy,
+.companion-layout > .chat-dialog { grid-area: 1 / 1; }
+.companion-layout > .companion-copy { transition: opacity .24s ease, transform .32s ease; }
+.companion-layout.in-conversation > .companion-copy { opacity: 0; transform: translateY(-8px); }
+.companion-layout > .chat-dialog {
+  position: relative; inset: auto; z-index: 3; margin: 0; width: 100%; min-width: 0;
+  height: clamp(345px, 53dvh, 445px); max-height: none; box-sizing: border-box;
+  color: #f2f1e9; border: 1px solid #bdcfdf4d; border-radius: 18px;
+  background: linear-gradient(148deg, #1a3344ed, #102534dc);
+  box-shadow: 0 12px 36px #08172230;
+}
+.companion-layout > .chat-dialog[open] { animation: orbit-chat-in .34s ease-out both; }
+@keyframes orbit-chat-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+.companion-layout .chat-head, .companion-layout .chat-form { background: transparent; border-color: #c8d8df30; }
+.companion-layout .chat-head h2, .companion-layout .chat-close { color: #f4f2e8; }
+.companion-layout .chat-head #chatMode, .companion-layout .chat-reset,
+.companion-layout .chat-message small { color: #b7ced4; }
+.companion-layout .chat-message p, .companion-layout .chat-quick button,
+.companion-layout .chat-form textarea { background: #182e3dde; border-color: #abc6d53d; color: #edf3f1; }
+.companion-layout .chat-message.user p { background: #314b53; }
+.companion-layout .chat-form textarea::placeholder { color: #b2c2ca; }
+.companion-layout .chat-send { background: #d2e4db; color: #183832; }
+.companion-layout .chat-feedback { color: #f3d39f; }
+@media (prefers-reduced-motion: reduce) {
+  .companion-layout > .companion-copy, .companion-layout > .chat-dialog[open] { transition: none; animation: none; }
+}
