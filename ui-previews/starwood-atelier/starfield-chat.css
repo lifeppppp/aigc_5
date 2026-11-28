@@ -52,3 +52,10 @@
 @media(prefers-reduced-motion:reduce) {
   .companion-layout > .companion-copy, .companion-layout > .chat-dialog[open] { transition: none; animation: none; }
 }
+
+
+/* One animated star field spans text, conversation and mascot. */
+#orbitPanel > #orbitParticles { z-index: 0; }
+#orbitPanel > .orbit-head,
+#orbitPanel > .companion-layout,
+#orbitPanel > .orbit-foot { position: relative; z-index: 1; }
